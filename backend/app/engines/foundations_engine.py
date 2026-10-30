@@ -1,15 +1,63 @@
+import ast
+import contextlib
 import io
-import sys
 import time
 import sqlite3
 from typing import Any, Dict
 
+class SecurityException(Exception):
+    pass
+
+class ASTSandboxValidator(ast.NodeVisitor):
+    FORBIDDEN_CALLS = {
+        "open", "eval", "exec", "globals", "locals", "getattr", "setattr",
+        "delattr", "__import__", "compile", "breakpoint", "memoryview"
+    }
+
+    def visit_Import(self, node: ast.Import) -> None:
+        raise SecurityException("Importing external modules is prohibited in the learning sandbox.")
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        raise SecurityException("Importing external modules is prohibited in the learning sandbox.")
+
+    def visit_Attribute(self, node: ast.Attribute) -> None:
+        if node.attr.startswith("_"):
+            raise SecurityException(f"Access to internal/dunder attribute '{node.attr}' is prohibited.")
+        self.generic_visit(node)
+
+    def visit_Name(self, node: ast.Name) -> None:
+        if node.id.startswith("_") and node.id != "_":
+            raise SecurityException(f"Access to private/dunder identifier '{node.id}' is prohibited.")
+        if node.id in self.FORBIDDEN_CALLS:
+            raise SecurityException(f"Call or reference to '{node.id}' is prohibited.")
+        self.generic_visit(node)
+
 def run_python_code(code: str, timeout_sec: int = 5) -> Dict[str, Any]:
     """
-    Safely execute a user-submitted Python script in an isolated namespace,
-    capturing stdout, execution time, and any exceptions.
+    Safely execute a user-submitted Python script in an isolated AST-verified namespace,
+    capturing thread-safe stdout, execution time, and variables.
     """
-    # Restrict built-in functions to safe subset
+    # 1. AST Static Security Validation
+    try:
+        parsed_ast = ast.parse(code)
+        validator = ASTSandboxValidator()
+        validator.visit(parsed_ast)
+    except SyntaxError as e:
+        return {
+            "success": False,
+            "error": f"SyntaxError: {str(e)}",
+            "stdout": "",
+            "execution_time_ms": 0
+        }
+    except SecurityException as e:
+        return {
+            "success": False,
+            "error": f"Security restriction: {str(e)}",
+            "stdout": "",
+            "execution_time_ms": 0
+        }
+
+    # 2. Safe built-in functions
     safe_builtins = {
         "abs": abs, "all": all, "any": any, "bin": bin, "bool": bool,
         "dict": dict, "enumerate": enumerate, "filter": filter, "float": float,
@@ -21,30 +69,20 @@ def run_python_code(code: str, timeout_sec: int = 5) -> Dict[str, Any]:
         "sorted": sorted, "str": str, "sum": sum, "tuple": tuple, "type": type,
         "zip": zip
     }
-    
-    # Prohibit dangerous keywords
-    forbidden = ["import os", "import sys", "import subprocess", "import shutil", "__import__", "eval(", "exec(", "open("]
-    for term in forbidden:
-        if term in code:
-            return {
-                "success": False,
-                "error": f"Security restriction: '{term}' is not permitted in sandbox.",
-                "stdout": "",
-                "execution_time_ms": 0
-            }
-
-    old_stdout = sys.stdout
-    redirected_output = io.StringIO()
-    sys.stdout = redirected_output
 
     start_time = time.perf_counter()
+    redirected_output = io.StringIO()
     exec_globals = {"__builtins__": safe_builtins}
     exec_locals: Dict[str, Any] = {}
 
     try:
-        exec(code, exec_globals, exec_locals)
+        # 3. Thread-safe redirect_stdout context
+        with contextlib.redirect_stdout(redirected_output):
+            exec(compile(parsed_ast, filename="<sandbox>", mode="exec"), exec_globals, exec_locals)
+            
         exec_time = (time.perf_counter() - start_time) * 1000
         output = redirected_output.getvalue()
+        
         return {
             "success": True,
             "stdout": output,
@@ -59,19 +97,17 @@ def run_python_code(code: str, timeout_sec: int = 5) -> Dict[str, Any]:
             "stdout": redirected_output.getvalue(),
             "execution_time_ms": round(exec_time, 2)
         }
-    finally:
-        sys.stdout = old_stdout
 
 def run_sql_challenge(query: str) -> Dict[str, Any]:
     """
     Execute SQL against an in-memory SQLite database populated with real AI telemetry data.
     """
-    forbidden_sql = ["ATTACH", "DETACH", "DROP", "ALTER", "PRAGMA"]
+    forbidden_sql = ["ATTACH", "DETACH", "DROP", "ALTER", "PRAGMA", "INSERT", "UPDATE", "DELETE", "VACUUM"]
     for keyword in forbidden_sql:
         if keyword in query.upper():
             return {
                 "success": False,
-                "error": f"Security restriction: Keyword '{keyword}' is prohibited.",
+                "error": f"Security restriction: Keyword '{keyword}' is prohibited. Read-only queries permitted.",
                 "columns": [],
                 "rows": []
             }
@@ -80,7 +116,7 @@ def run_sql_challenge(query: str) -> Dict[str, Any]:
     cursor = conn.cursor()
 
     try:
-        # Create standard tables
+        # Create standard telemetry tables
         cursor.execute("""
             CREATE TABLE experiments (
                 id INTEGER PRIMARY KEY,

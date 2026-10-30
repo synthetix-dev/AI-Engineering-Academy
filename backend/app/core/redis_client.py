@@ -24,3 +24,21 @@ async def publish_run_event(run_id: str, event_data: dict[str, Any]) -> None:
     client = get_redis_client()
     channel = f"run_events:{run_id}"
     await client.publish(channel, json.dumps(event_data))
+
+async def subscribe_to_run_events(run_id: str) -> AsyncGenerator[dict[str, Any], None]:
+    """Subscribe to Redis PubSub channel for real-time SSE event streaming."""
+    client = get_redis_client()
+    channel = f"run_events:{run_id}"
+    pubsub = client.pubsub()
+    await pubsub.subscribe(channel)
+    try:
+        async for message in pubsub.listen():
+            if message["type"] == "message":
+                try:
+                    data = json.loads(message["data"])
+                    yield data
+                except Exception:
+                    yield {"raw": message["data"]}
+    finally:
+        await pubsub.unsubscribe(channel)
+        await pubsub.close()

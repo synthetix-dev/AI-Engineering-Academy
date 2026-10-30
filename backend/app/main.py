@@ -15,6 +15,7 @@ from backend.app.api.v1 import (
     progress,
     quotas,
     admin,
+    career_paths,
 )
 
 @asynccontextmanager
@@ -55,6 +56,7 @@ app.include_router(evaluations.router, prefix=api_v1_prefix)
 app.include_router(progress.router, prefix=api_v1_prefix)
 app.include_router(quotas.router, prefix=api_v1_prefix)
 app.include_router(admin.router, prefix=api_v1_prefix)
+app.include_router(career_paths.router, prefix=api_v1_prefix)
 
 @app.get("/")
 async def root():

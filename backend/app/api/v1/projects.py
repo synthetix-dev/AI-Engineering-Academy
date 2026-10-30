@@ -71,6 +71,56 @@ async def get_project(
 
     return project
 
+@router.put("/{project_id}", response_model=ProjectResponse)
+async def update_project(
+    project_id: uuid.UUID,
+    req: ProjectCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update project with strict IDOR ownership enforcement (SEC-04)."""
+    stmt = select(Project).where(Project.id == project_id)
+    res = await db.execute(stmt)
+    project = res.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+    if project.owner_id != current_user.id and current_user.role.value != "platform_admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to edit this project")
+
+    project.title = req.title
+    project.description = req.description
+    project.visibility = ProjectVisibility.PUBLIC if req.visibility == "public" else ProjectVisibility.PRIVATE
+    project.repo_url = req.repo_url
+    project.architecture_md = req.architecture_md
+    project.metrics = req.metrics
+    project.configs = req.configs
+    project.artifacts = req.artifacts
+
+    await db.commit()
+    await db.refresh(project)
+    return project
+
+@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_project(
+    project_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete project with strict IDOR ownership enforcement (SEC-04)."""
+    stmt = select(Project).where(Project.id == project_id)
+    res = await db.execute(stmt)
+    project = res.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+    if project.owner_id != current_user.id and current_user.role.value != "platform_admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to delete this project")
+
+    await db.delete(project)
+    await db.commit()
+    return None
+
 @router.get("/{project_id}/export/markdown")
 async def export_project_markdown(
     project_id: uuid.UUID,
@@ -83,6 +133,10 @@ async def export_project_markdown(
     project = res.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+    if project.visibility != ProjectVisibility.PUBLIC:
+        if not current_user or (project.owner_id != current_user.id and current_user.role.value != "platform_admin"):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to private project")
 
     md_content = f"""# {project.title}
 *AI Engineering Academy — Відтворюваний звіт проєкту*

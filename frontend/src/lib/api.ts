@@ -339,6 +339,50 @@ export async function createProject(data: {
   });
 }
 
+export interface CareerPath {
+  slug: string;
+  title: string;
+  tagline: string;
+  description: string;
+  icon: string;
+  level: string;
+  estimated_hours: number;
+  role_focus: string;
+  track_slugs: string[];
+  milestones: Array<{
+    title: string;
+    description: string;
+    xp: number;
+  }>;
+}
+
+export async function getCareerPaths(): Promise<CareerPath[]> {
+  return request<CareerPath[]>("/career-paths");
+}
+
+export async function getCareerPath(slug: string): Promise<CareerPath> {
+  return request<CareerPath>(`/career-paths/${slug}`);
+}
+
+export async function submitOnboarding(data: {
+  career_path: string;
+  level: string;
+  interests?: string[];
+  answers?: Record<string, any>;
+}): Promise<{
+  success: boolean;
+  message: string;
+  career_path: string;
+  starting_track: string;
+  recommended_tracks: string[];
+}> {
+  await ensureAuthenticated();
+  return request("/career-paths/onboarding", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
 export async function getProgress(): Promise<ProgressData> {
   await ensureAuthenticated();
   return request<ProgressData>("/me/progress");

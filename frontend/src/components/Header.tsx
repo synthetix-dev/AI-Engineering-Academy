@@ -56,11 +56,12 @@ export default function Header() {
   };
 
   const navItems = [
+    { label: "Кар'єра", href: "/career-paths", icon: Briefcase },
     { label: "Треки", href: "/tracks", icon: Layers },
     { label: "Лабораторії (20)", href: "/labs", icon: Terminal },
     { label: "Моделі", href: "/models", icon: Cpu },
     { label: "Датасети", href: "/datasets", icon: Database },
-    { label: "Портфоліо", href: "/portfolio", icon: Briefcase },
+    { label: "Портфоліо", href: "/portfolio", icon: Shield },
     { label: "Прогрес", href: "/progress", icon: Award },
     { label: "Ops & Статус", href: "/admin", icon: Activity },
   ];

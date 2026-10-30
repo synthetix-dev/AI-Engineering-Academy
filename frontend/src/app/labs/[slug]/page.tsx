@@ -22,6 +22,16 @@ import {
   Download,
 } from "lucide-react";
 import { getLabBySlug, executeRun, getRun, Lab, RunResult } from "@/lib/api";
+import MathLabWorkspace from "@/components/labs/MathLabWorkspace";
+import DataLabWorkspace from "@/components/labs/DataLabWorkspace";
+import MLLabWorkspace from "@/components/labs/MLLabWorkspace";
+import DeepLearningWorkspace from "@/components/labs/DeepLearningWorkspace";
+import PromptStudioWorkspace from "@/components/labs/PromptStudioWorkspace";
+import RAGPipelineWorkspace from "@/components/labs/RAGPipelineWorkspace";
+import FineTuningWorkspace from "@/components/labs/FineTuningWorkspace";
+import AgentWorkspace from "@/components/labs/AgentWorkspace";
+import AutomationDAGWorkspace from "@/components/labs/AutomationDAGWorkspace";
+import MLOpsDriftWorkspace from "@/components/labs/MLOpsDriftWorkspace";
 
 type TabKey =
   | "theory"
@@ -40,7 +50,7 @@ export default function LabStudioPage() {
   const slug = params?.slug as string;
 
   const [lab, setLab] = useState<Lab | null>(null);
-  const [activeTab, setActiveTab] = useState<TabKey>("configuration");
+  const [activeTab, setActiveTab] = useState<TabKey>("workspace");
   const [executionMode, setExecutionMode] = useState<"cpu-real" | "gpu-real" | "demo">("cpu-real");
   const [configParams, setConfigParams] = useState<string>("{}");
   const [running, setRunning] = useState(false);
@@ -59,7 +69,7 @@ export default function LabStudioPage() {
       .catch((err) => setError(err.message));
   }, [slug]);
 
-  const handleStartExecution = async () => {
+  const handleStartExecution = async (explicitParams?: any) => {
     if (!lab) return;
     setRunning(true);
     setError(null);
@@ -71,11 +81,13 @@ export default function LabStudioPage() {
     ]);
 
     try {
-      let parsedParams = {};
-      try {
-        parsedParams = JSON.parse(configParams);
-      } catch (e: any) {
-        throw new Error("Невалідний JSON у конфігурації: " + e.message);
+      let parsedParams = explicitParams;
+      if (!parsedParams) {
+        try {
+          parsedParams = JSON.parse(configParams);
+        } catch (e: any) {
+          throw new Error("Невалідний JSON у конфігурації: " + e.message);
+        }
       }
 
       const res = await executeRun(lab.id, executionMode, parsedParams);
@@ -101,6 +113,132 @@ export default function LabStudioPage() {
     } finally {
       setRunning(false);
     }
+  };
+
+  const renderSpecializedWorkspace = () => {
+    if (!lab) return null;
+    const currentSlug = lab.slug.toLowerCase();
+
+    if (currentSlug.includes("math")) {
+      return (
+        <MathLabWorkspace
+          onRun={(params) => handleStartExecution(params)}
+          running={running}
+          result={currentRun}
+        />
+      );
+    }
+    if (currentSlug.includes("data")) {
+      return (
+        <DataLabWorkspace
+          onRun={(params) => handleStartExecution(params)}
+          running={running}
+          result={currentRun}
+        />
+      );
+    }
+    if (currentSlug.includes("ml-") || currentSlug.includes("classical") || currentSlug.includes("playground")) {
+      return (
+        <MLLabWorkspace
+          onRun={(params) => handleStartExecution(params)}
+          running={running}
+          result={currentRun}
+        />
+      );
+    }
+    if (currentSlug.includes("deep") || currentSlug.includes("vision") || currentSlug.includes("cv") || currentSlug.includes("neural")) {
+      return (
+        <DeepLearningWorkspace
+          onRun={(params) => handleStartExecution(params)}
+          running={running}
+          result={currentRun}
+        />
+      );
+    }
+    if (currentSlug.includes("prompt")) {
+      return (
+        <PromptStudioWorkspace
+          onRun={(params) => handleStartExecution(params)}
+          running={running}
+          result={currentRun}
+        />
+      );
+    }
+    if (currentSlug.includes("rag")) {
+      return (
+        <RAGPipelineWorkspace
+          onRun={(params) => handleStartExecution(params)}
+          running={running}
+          result={currentRun}
+        />
+      );
+    }
+    if (currentSlug.includes("fine-tuning") || currentSlug.includes("finetuning")) {
+      return (
+        <FineTuningWorkspace
+          onRun={(params) => handleStartExecution(params)}
+          running={running}
+          result={currentRun}
+        />
+      );
+    }
+    if (currentSlug.includes("agent")) {
+      return (
+        <AgentWorkspace
+          onRun={(params) => handleStartExecution(params)}
+          running={running}
+          result={currentRun}
+        />
+      );
+    }
+    if (currentSlug.includes("automation") || currentSlug.includes("workflow")) {
+      return (
+        <AutomationDAGWorkspace
+          onRun={(params) => handleStartExecution(params)}
+          running={running}
+          result={currentRun}
+        />
+      );
+    }
+    if (currentSlug.includes("mlops") || currentSlug.includes("drift") || currentSlug.includes("monitoring")) {
+      return (
+        <MLOpsDriftWorkspace
+          onRun={(params) => handleStartExecution(params)}
+          running={running}
+          result={currentRun}
+        />
+      );
+    }
+
+    // Default clean workspace for code & foundations
+    return (
+      <div className="space-y-4">
+        <div className="rounded-xl border border-borderline bg-gray-50/50 p-5 dark:border-dark-border dark:bg-dark-surface">
+          <h4 className="text-sm font-bold text-graphite dark:text-dark-text mb-2">
+            Інтерактивний термінал експерименту: {lab.title}
+          </h4>
+          <p className="text-xs text-gray-600 dark:text-dark-muted mb-4">
+            Параметри надсилаються безпосередньо у функцію виконання обчислювального воркера на CPU.
+          </p>
+          <textarea
+            rows={8}
+            value={configParams}
+            onChange={(e) => setConfigParams(e.target.value)}
+            className="w-full rounded-md border border-borderline bg-white p-3 font-mono text-xs text-graphite dark:border-dark-border dark:bg-dark-bg dark:text-dark-text focus:border-denim"
+          />
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={() => handleStartExecution()}
+              disabled={running}
+              className="inline-flex items-center gap-2 rounded-md bg-denim px-5 py-2 text-xs font-semibold text-white shadow hover:bg-denim-dark transition disabled:opacity-50"
+            >
+              <Play className="h-3.5 w-3.5" />
+              {running ? "Виконується на воркері..." : "Запустити обчислення"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   if (error && !lab) {
@@ -287,20 +425,8 @@ export default function LabStudioPage() {
           </div>
         )}
 
-        {/* 3. Workspace */}
-        {activeTab === "workspace" && (
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold text-graphite dark:text-dark-text">Робочий простір експерименту</h3>
-            <p className="text-xs text-gray-500 dark:text-dark-muted">
-              Статус воркера: <strong>Готовий до виконання</strong>. Клас середовища: <code>{lab.runtime_class}</code>.
-            </p>
-            <div className="rounded border border-borderline bg-cloud/40 p-4 dark:border-dark-border dark:bg-dark-bg text-xs font-mono space-y-1">
-              <div>// Ізоляція пам&apos;яті: 2048 MB limit</div>
-              <div>// Максимальний таймаут: {lab.max_duration_sec} секунд</div>
-              <div>// Мережевий egress: Заблоковано (тільки освітні allowlisted сервіси)</div>
-            </div>
-          </div>
-        )}
+        {/* 3. Specialized Workspace */}
+        {activeTab === "workspace" && renderSpecializedWorkspace()}
 
         {/* 4. Execution */}
         {activeTab === "execution" && (

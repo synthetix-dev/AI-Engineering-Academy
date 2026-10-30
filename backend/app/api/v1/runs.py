@@ -1,63 +1,135 @@
 import uuid
-import json
-import asyncio
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List, Optional, AsyncGenerator
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
-import torch
+import asyncio
+import json
 
-from backend.app.core.database import get_db, AsyncSessionLocal
-from backend.app.core.redis_client import get_redis_client, publish_run_event
+from backend.app.core.database import get_db, async_session_maker
+from backend.app.models.run import Run
 from backend.app.models.cms import Lab
-from backend.app.models.run import Run, RunEvent
 from backend.app.models.quota import Quota
 from backend.app.models.user import User
-from backend.app.models.enums import ExecutionMode, RunStatus, RunErrorCode
-from backend.app.schemas.runs import RunCreate, RunResponse
+from backend.app.models.enums import RunStatus, RunErrorCode, ExecutionMode
+from backend.app.schemas.runs import RunCreateRequest, RunResponse
 from backend.app.api.deps import get_current_user
 from backend.app.engines import dispatcher
+from backend.app.core.redis_client import publish_run_event, subscribe_to_run_events
 
 router = APIRouter(prefix="/runs", tags=["Lab Runs"])
 
+async def execute_run_in_background(run_id: uuid.UUID, lab_slug: str, params: dict, user_id: uuid.UUID):
+    """
+    Background worker task decoupling heavy ML/training workloads from HTTP requests.
+    Updates DB state and publishes Redis telemetry.
+    """
+    async with async_session_maker() as db:
+        # Load run record
+        stmt = select(Run).where(Run.id == run_id)
+        res = await db.execute(stmt)
+        run_record = res.scalar_one_or_none()
+        if not run_record:
+            return
+
+        run_record.status = RunStatus.RUNNING
+        run_record.started_at = datetime.now(timezone.utc)
+        await db.commit()
+
+        await publish_run_event(str(run_id), {
+            "event_type": "status_change",
+            "status": "RUNNING",
+            "message": f"Execution started on background worker for lab '{lab_slug}'."
+        })
+
+        try:
+            execution_result = await dispatcher.dispatch_lab_execution(lab_slug, params)
+            exec_duration = execution_result["execution_time_sec"]
+
+            run_record.finished_at = datetime.now(timezone.utc)
+            if execution_result["success"]:
+                run_record.status = RunStatus.SUCCEEDED
+                run_record.metrics = execution_result["metrics"]
+                run_record.artifacts = execution_result["artifacts"]
+                run_record.resource_usage = {
+                    "cpu_seconds": exec_duration,
+                    "memory_mb": 128.0
+                }
+
+                # Update user quota
+                q_stmt = select(Quota).where(Quota.user_id == user_id)
+                q_res = await db.execute(q_stmt)
+                quota = q_res.scalar_one_or_none()
+                if quota:
+                    quota.cpu_seconds_used += exec_duration
+
+                await publish_run_event(str(run_id), {
+                    "event_type": "status_change",
+                    "status": "SUCCEEDED",
+                    "metrics": run_record.metrics,
+                    "duration_sec": exec_duration
+                })
+            else:
+                run_record.status = RunStatus.FAILED
+                run_record.error_code = RunErrorCode.INTERNAL
+                run_record.error_message = execution_result.get("error", "Engine execution failed")
+                await publish_run_event(str(run_id), {
+                    "event_type": "status_change",
+                    "status": "FAILED",
+                    "error": run_record.error_message
+                })
+
+        except Exception as e:
+            run_record.status = RunStatus.FAILED
+            run_record.error_code = RunErrorCode.INTERNAL
+            run_record.error_message = str(e)
+            run_record.finished_at = datetime.now(timezone.utc)
+            await publish_run_event(str(run_id), {
+                "event_type": "status_change",
+                "status": "FAILED",
+                "error": str(e)
+            })
+
+        await db.commit()
+
 @router.post("", response_model=RunResponse, status_code=status.HTTP_201_CREATED)
-async def create_and_execute_run(
-    req: RunCreate,
+async def create_run(
+    req: RunCreateRequest,
+    wait: bool = Query(True, description="Wait for execution to complete synchronously, or queue to background worker"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Validate parameters, reserve quota, start real execution on isolated engine,
-    and persist artifacts and metrics.
+    Execute or queue an interactive lab computational run:
+    - Verifies lab registration and user quota
+    - If wait=False: Enqueues to async background worker and returns HTTP 201/202 with status=QUEUED
+    - If wait=True: Executes computation synchronously and returns completed run metrics
+    - Telemetry streamed to Redis Pub/Sub for live observation
     """
-    # 1. Fetch Lab
-    stmt_lab = select(Lab).where(Lab.id == req.lab_id)
-    res_lab = await db.execute(stmt_lab)
-    lab = res_lab.scalar_one_or_none()
+    # 1. Fetch Lab Definition
+    stmt = select(Lab).where(Lab.id == req.lab_id)
+    res = await db.execute(stmt)
+    lab = res.scalar_one_or_none()
     if not lab:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lab not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Lab {req.lab_id} not found")
 
-    # 2. Check and Reserve User Quota
+    # 2. Check User Quota
     stmt_quota = select(Quota).where(Quota.user_id == current_user.id)
     res_quota = await db.execute(stmt_quota)
     quota = res_quota.scalar_one_or_none()
-    if not quota:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Quota profile not found for user")
-
-    if quota.cpu_seconds_used >= quota.cpu_seconds_budget:
+    if quota and quota.cpu_seconds_used >= quota.cpu_seconds_budget:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="CPU quota budget exhausted. Please wait for reset or request an operator limit increase."
+            detail="User CPU quota exceeded. Please wait for reset or request higher tier."
         )
 
-    # 3. Check Execution Mode
+    # 3. Check Hardware Constraints
     actual_mode = req.execution_mode
     if req.execution_mode == ExecutionMode.GPU_REAL:
-        # Check if actual GPU is physically available
-        has_gpu = torch.cuda.is_available() or torch.backends.mps.is_available()
-        if not has_gpu:
-            # Per section 13: "Якщо немає GPU: повідомити про нестачу ресурсів"
+        import torch
+        if not torch.cuda.is_available() and not torch.backends.mps.is_available():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="GPU-real mode is not available on this worker host. Please select CPU-real mode."
@@ -94,12 +166,17 @@ async def create_and_execute_run(
     await db.commit()
     await db.refresh(run_record)
 
-    # 6. Execute Real Computational Engine
+    # 6. Execute based on wait flag
+    if not wait:
+        # OPS-01: Asynchronous non-blocking background dispatch
+        asyncio.create_task(execute_run_in_background(run_record.id, lab.slug, req.params, current_user.id))
+        return run_record
+
+    # Synchronous execution mode (wait=True)
     run_record.status = RunStatus.RUNNING
     run_record.started_at = datetime.now(timezone.utc)
     await db.commit()
 
-    # Emit initial running event via Redis
     await publish_run_event(str(run_record.id), {
         "event_type": "status_change",
         "status": "RUNNING",
@@ -120,9 +197,9 @@ async def create_and_execute_run(
                 "cpu_seconds": exec_duration,
                 "memory_mb": 128.0
             }
-            quota.cpu_seconds_used += exec_duration
+            if quota:
+                quota.cpu_seconds_used += exec_duration
 
-            # Emit completion event
             await publish_run_event(str(run_record.id), {
                 "event_type": "status_change",
                 "status": "SUCCEEDED",
@@ -168,83 +245,58 @@ async def get_run_status(
     
     # IDOR check: only owner or admin can view run details
     if run_item.user_id != current_user.id and current_user.role.value != "platform_admin":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this run")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     return run_item
 
-@router.get("/{run_id}/events")
-async def stream_run_events(
+@router.get("", response_model=List[RunResponse])
+async def list_user_runs(
+    limit: int = 50,
+    offset: int = 0,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = select(Run).where(Run.user_id == current_user.id).order_by(Run.created_at.desc()).offset(offset).limit(limit)
+    res = await db.execute(stmt)
+    return res.scalars().all()
+
+@router.get("/{run_id}/stream")
+async def stream_run_logs(
     run_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Server-Sent Events (SSE) stream for real-time trace telemetry."""
+    """
+    Server-Sent Events (SSE) streaming real-time metrics, loss curves, and logs
+    from the Redis pubsub channel corresponding to the active run.
+    """
     stmt = select(Run).where(Run.id == run_id)
     res = await db.execute(stmt)
     run_item = res.scalar_one_or_none()
     if not run_item:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
-
     if run_item.user_id != current_user.id and current_user.role.value != "platform_admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
-    async def event_generator():
-        client = get_redis_client()
-        pubsub = client.pubsub()
-        channel = f"run_events:{run_id}"
-        await pubsub.subscribe(channel)
-
-        # First yield the current snapshot
-        snapshot = {
-            "event_type": "initial_snapshot",
-            "status": run_item.status.value,
-            "metrics": run_item.metrics,
-            "trace_id": run_item.trace_id
-        }
-        yield f"data: {json.dumps(snapshot)}\n\n"
-
-        if run_item.status in [RunStatus.SUCCEEDED, RunStatus.FAILED, RunStatus.CANCELLED]:
-            await pubsub.unsubscribe(channel)
+    async def event_generator() -> AsyncGenerator[str, None]:
+        # Initial status event
+        yield f"event: message\ndata: {json.dumps({'event_type': 'connected', 'status': run_item.status.value, 'run_id': str(run_item.id)})}\n\n"
+        
+        if run_item.status in [RunStatus.SUCCEEDED, RunStatus.FAILED]:
+            yield f"event: message\ndata: {json.dumps({'event_type': 'status_change', 'status': run_item.status.value, 'metrics': run_item.metrics})}\n\n"
             return
 
-        try:
-            while True:
-                message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
-                if message and message.get("data"):
-                    payload_str = message["data"]
-                    yield f"data: {payload_str}\n\n"
-                    # Check if terminal
-                    try:
-                        data_obj = json.loads(payload_str)
-                        if data_obj.get("status") in ["SUCCEEDED", "FAILED", "CANCELLED"]:
-                            break
-                    except Exception:
-                        pass
-                await asyncio.sleep(0.5)
-        finally:
-            await pubsub.unsubscribe(channel)
+        async for event in subscribe_to_run_events(str(run_id)):
+            yield f"event: message\ndata: {json.dumps(event)}\n\n"
+            if event.get("status") in ["SUCCEEDED", "FAILED", "succeeded", "failed"]:
+                break
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
-
-@router.post("/{run_id}/cancel")
-async def cancel_run(
-    run_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    stmt = select(Run).where(Run.id == run_id)
-    res = await db.execute(stmt)
-    run_item = res.scalar_one_or_none()
-    if not run_item:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
-
-    if run_item.user_id != current_user.id and current_user.role.value != "platform_admin":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
-
-    if run_item.status in [RunStatus.QUEUED, RunStatus.RUNNING]:
-        run_item.status = RunStatus.CANCELLED
-        run_item.finished_at = datetime.now(timezone.utc)
-        await db.commit()
-        await publish_run_event(str(run_id), {"event_type": "status_change", "status": "CANCELLED"})
-
-    return {"status": "cancelled", "run_id": str(run_id)}
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Type": "text/event-stream"
+        }
+    )

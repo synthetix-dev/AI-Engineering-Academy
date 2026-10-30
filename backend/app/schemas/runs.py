@@ -12,6 +12,8 @@ class RunCreate(BaseModel):
     seed: int = 42
     idempotency_key: Optional[str] = None
 
+RunCreateRequest = RunCreate
+
 class RunEventResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
