@@ -37,3 +37,21 @@ def decode_access_token(token: str) -> dict[str, Any] | None:
         return payload
     except JWTError:
         return None
+
+def sanitize_json(val: Any) -> Any:
+    """Recursively converts NaN, Infinity, -Infinity to None for PostgreSQL JSONB compliance."""
+    import math
+    if isinstance(val, float):
+        if math.isnan(val) or math.isinf(val):
+            return None
+        return val
+    elif hasattr(val, "item"):  # numpy scalar
+        try:
+            return sanitize_json(val.item())
+        except Exception:
+            return None
+    elif isinstance(val, dict):
+        return {str(k): sanitize_json(v) for k, v in val.items()}
+    elif isinstance(val, (list, tuple)):
+        return [sanitize_json(v) for v in val]
+    return val

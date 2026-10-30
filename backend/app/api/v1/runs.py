@@ -18,6 +18,7 @@ from backend.app.schemas.runs import RunCreateRequest, RunResponse
 from backend.app.api.deps import get_current_user
 from backend.app.engines import dispatcher
 from backend.app.core.redis_client import publish_run_event, subscribe_to_run_events
+from backend.app.core.security import sanitize_json
 
 router = APIRouter(prefix="/runs", tags=["Lab Runs"])
 
@@ -51,12 +52,12 @@ async def execute_run_in_background(run_id: uuid.UUID, lab_slug: str, params: di
             run_record.finished_at = datetime.now(timezone.utc)
             if execution_result["success"]:
                 run_record.status = RunStatus.SUCCEEDED
-                run_record.metrics = execution_result["metrics"]
-                run_record.artifacts = execution_result["artifacts"]
-                run_record.resource_usage = {
+                run_record.metrics = sanitize_json(execution_result["metrics"])
+                run_record.artifacts = sanitize_json(execution_result["artifacts"])
+                run_record.resource_usage = sanitize_json({
                     "cpu_seconds": exec_duration,
                     "memory_mb": 128.0
-                }
+                })
 
                 # Update user quota
                 q_stmt = select(Quota).where(Quota.user_id == user_id)
@@ -202,12 +203,12 @@ async def create_run(
 
         if execution_result["success"]:
             run_record.status = RunStatus.SUCCEEDED
-            run_record.metrics = execution_result["metrics"]
-            run_record.artifacts = execution_result["artifacts"]
-            run_record.resource_usage = {
+            run_record.metrics = sanitize_json(execution_result["metrics"])
+            run_record.artifacts = sanitize_json(execution_result["artifacts"])
+            run_record.resource_usage = sanitize_json({
                 "cpu_seconds": exec_duration,
                 "memory_mb": 128.0
-            }
+            })
             if quota:
                 quota.cpu_seconds_used += exec_duration
 

@@ -124,10 +124,12 @@ def run_data_cleaning_pipeline(
                 cleaned_df[col] = (cleaned_df[col] - min_val) / (max_val - min_val)
         actions_taken.append("Applied MinMaxScaler to range [0, 1]")
 
+    # Replace NaN with None for valid JSON serialization
+    cleaned_df = cleaned_df.replace({np.nan: None})
     return {
         "initial_rows": len(df),
         "cleaned_rows": len(cleaned_df),
         "actions_taken": actions_taken,
         "sample_preview": cleaned_df.head(10).to_dict(orient="records"),
-        "numeric_stats": {col: {"mean": round(float(cleaned_df[col].mean()), 4), "std": round(float(cleaned_df[col].std()), 4)} for col in numeric_cols if col in cleaned_df}
+        "numeric_stats": {col: {"mean": round(float(cleaned_df[col].mean()), 4), "std": round(float(cleaned_df[col].std()), 4)} for col in numeric_cols if col in cleaned_df and cleaned_df[col] is not None}
     }

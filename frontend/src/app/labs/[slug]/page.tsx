@@ -32,6 +32,16 @@ import FineTuningWorkspace from "@/components/labs/FineTuningWorkspace";
 import AgentWorkspace from "@/components/labs/AgentWorkspace";
 import AutomationDAGWorkspace from "@/components/labs/AutomationDAGWorkspace";
 import MLOpsDriftWorkspace from "@/components/labs/MLOpsDriftWorkspace";
+import PythonSQLSandboxWorkspace from "@/components/labs/PythonSQLSandboxWorkspace";
+import NLPSpeechWorkspace from "@/components/labs/NLPSpeechWorkspace";
+import CVLabWorkspace from "@/components/labs/CVLabWorkspace";
+import GenerativeAttentionWorkspace from "@/components/labs/GenerativeAttentionWorkspace";
+import LLMBenchWorkspace from "@/components/labs/LLMBenchWorkspace";
+import BanditDPOWorkspace from "@/components/labs/BanditDPOWorkspace";
+import SafetyDefenseWorkspace from "@/components/labs/SafetyDefenseWorkspace";
+import QuantizationBenchWorkspace from "@/components/labs/QuantizationBenchWorkspace";
+import ResearchAblationWorkspace from "@/components/labs/ResearchAblationWorkspace";
+import CapstoneProjectWorkspace from "@/components/labs/CapstoneProjectWorkspace";
 
 type TabKey =
   | "theory"
@@ -119,7 +129,18 @@ export default function LabStudioPage() {
     if (!lab) return null;
     const currentSlug = lab.slug.toLowerCase();
 
-    if (currentSlug.includes("math")) {
+    // 01 Foundations & Python/SQL
+    if (currentSlug.includes("python") || currentSlug.includes("sandbox") || currentSlug.includes("foundations")) {
+      return (
+        <PythonSQLSandboxWorkspace
+          onRun={(params) => handleStartExecution(params)}
+          running={running}
+          result={currentRun}
+        />
+      );
+    }
+    // 02 Mathematics for AI
+    if (currentSlug.includes("matrix") || currentSlug.includes("gradient") || currentSlug.includes("math")) {
       return (
         <MathLabWorkspace
           onRun={(params) => handleStartExecution(params)}
@@ -128,7 +149,8 @@ export default function LabStudioPage() {
         />
       );
     }
-    if (currentSlug.includes("data")) {
+    // 03 Data Engineering
+    if (currentSlug.includes("cleaning") || currentSlug.includes("data")) {
       return (
         <DataLabWorkspace
           onRun={(params) => handleStartExecution(params)}
@@ -137,7 +159,8 @@ export default function LabStudioPage() {
         />
       );
     }
-    if (currentSlug.includes("ml-") || currentSlug.includes("classical") || currentSlug.includes("playground")) {
+    // 04 Classical ML
+    if (currentSlug.includes("ml-playground") || currentSlug.includes("classical")) {
       return (
         <MLLabWorkspace
           onRun={(params) => handleStartExecution(params)}
@@ -146,7 +169,8 @@ export default function LabStudioPage() {
         />
       );
     }
-    if (currentSlug.includes("deep") || currentSlug.includes("vision") || currentSlug.includes("cv") || currentSlug.includes("neural")) {
+    // 05 Deep Learning
+    if (currentSlug.includes("neural-builder") || currentSlug.includes("deep-learning")) {
       return (
         <DeepLearningWorkspace
           onRun={(params) => handleStartExecution(params)}
@@ -155,7 +179,48 @@ export default function LabStudioPage() {
         />
       );
     }
-    if (currentSlug.includes("prompt")) {
+    // 06 NLP & Speech
+    if (currentSlug.includes("nlp-bench") || currentSlug.includes("speech") || currentSlug.includes("nlp")) {
+      return (
+        <NLPSpeechWorkspace
+          onRun={(params) => handleStartExecution(params)}
+          running={running}
+          result={currentRun}
+        />
+      );
+    }
+    // 07 Computer Vision
+    if (currentSlug.includes("cv-lab") || currentSlug.includes("vision")) {
+      return (
+        <CVLabWorkspace
+          onRun={(params) => handleStartExecution(params)}
+          running={running}
+          result={currentRun}
+        />
+      );
+    }
+    // 08 Generative Models
+    if (currentSlug.includes("attention-mechanics") || currentSlug.includes("generative")) {
+      return (
+        <GenerativeAttentionWorkspace
+          onRun={(params) => handleStartExecution(params)}
+          running={running}
+          result={currentRun}
+        />
+      );
+    }
+    // 09 LLM Engineering
+    if (currentSlug.includes("llm-inference") || currentSlug.includes("llm-bench")) {
+      return (
+        <LLMBenchWorkspace
+          onRun={(params) => handleStartExecution(params)}
+          running={running}
+          result={currentRun}
+        />
+      );
+    }
+    // 10 Prompt Engineering
+    if (currentSlug.includes("prompt-lab") || currentSlug.includes("prompt")) {
       return (
         <PromptStudioWorkspace
           onRun={(params) => handleStartExecution(params)}
@@ -164,7 +229,8 @@ export default function LabStudioPage() {
         />
       );
     }
-    if (currentSlug.includes("rag")) {
+    // 11 RAG Systems
+    if (currentSlug.includes("rag-builder") || currentSlug.includes("rag")) {
       return (
         <RAGPipelineWorkspace
           onRun={(params) => handleStartExecution(params)}
@@ -173,7 +239,8 @@ export default function LabStudioPage() {
         />
       );
     }
-    if (currentSlug.includes("fine-tuning") || currentSlug.includes("finetuning")) {
+    // 12 Fine-Tuning
+    if (currentSlug.includes("lora") || currentSlug.includes("fine-tuning") || currentSlug.includes("finetuning")) {
       return (
         <FineTuningWorkspace
           onRun={(params) => handleStartExecution(params)}
@@ -182,7 +249,18 @@ export default function LabStudioPage() {
         />
       );
     }
-    if (currentSlug.includes("agent")) {
+    // 13 RL & Preference Learning
+    if (currentSlug.includes("bandit") || currentSlug.includes("dpo") || currentSlug.includes("rl")) {
+      return (
+        <BanditDPOWorkspace
+          onRun={(params) => handleStartExecution(params)}
+          running={running}
+          result={currentRun}
+        />
+      );
+    }
+    // 14 AI Agents
+    if (currentSlug.includes("agent-sandbox") || currentSlug.includes("agent")) {
       return (
         <AgentWorkspace
           onRun={(params) => handleStartExecution(params)}
@@ -191,7 +269,8 @@ export default function LabStudioPage() {
         />
       );
     }
-    if (currentSlug.includes("automation") || currentSlug.includes("workflow")) {
+    // 15 Automation & Integrations
+    if (currentSlug.includes("workflow") || currentSlug.includes("automation") || currentSlug.includes("dag")) {
       return (
         <AutomationDAGWorkspace
           onRun={(params) => handleStartExecution(params)}
@@ -200,7 +279,8 @@ export default function LabStudioPage() {
         />
       );
     }
-    if (currentSlug.includes("mlops") || currentSlug.includes("drift") || currentSlug.includes("monitoring")) {
+    // 16 MLOps / LLMOps
+    if (currentSlug.includes("deployment-drift") || currentSlug.includes("mlops") || currentSlug.includes("drift")) {
       return (
         <MLOpsDriftWorkspace
           onRun={(params) => handleStartExecution(params)}
@@ -209,8 +289,48 @@ export default function LabStudioPage() {
         />
       );
     }
+    // 17 AI Safety & Defense
+    if (currentSlug.includes("safety") || currentSlug.includes("defense")) {
+      return (
+        <SafetyDefenseWorkspace
+          onRun={(params) => handleStartExecution(params)}
+          running={running}
+          result={currentRun}
+        />
+      );
+    }
+    // 18 Optimization & Infra
+    if (currentSlug.includes("quantization") || currentSlug.includes("optimization") || currentSlug.includes("hardware")) {
+      return (
+        <QuantizationBenchWorkspace
+          onRun={(params) => handleStartExecution(params)}
+          running={running}
+          result={currentRun}
+        />
+      );
+    }
+    // 19 Research & Methods
+    if (currentSlug.includes("ablation") || currentSlug.includes("research") || currentSlug.includes("reproduction")) {
+      return (
+        <ResearchAblationWorkspace
+          onRun={(params) => handleStartExecution(params)}
+          running={running}
+          result={currentRun}
+        />
+      );
+    }
+    // 20 Capstone Design
+    if (currentSlug.includes("capstone") || currentSlug.includes("project")) {
+      return (
+        <CapstoneProjectWorkspace
+          onRun={(params) => handleStartExecution(params)}
+          running={running}
+          result={currentRun}
+        />
+      );
+    }
 
-    // Default clean workspace for code & foundations
+    // Fallback
     return (
       <div className="space-y-4">
         <div className="rounded-xl border border-borderline bg-gray-50/50 p-5 dark:border-dark-border dark:bg-dark-surface">
