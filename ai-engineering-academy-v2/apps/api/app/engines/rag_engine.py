@@ -4,7 +4,7 @@ import json
 import numpy as np
 from typing import Any, Dict, List, Tuple
 from sqlalchemy import text
-from backend.app.core.database import AsyncSessionLocal
+from app.core.database import AsyncSessionLocal
 
 def chunk_document_text(text_content: str, chunk_size: int = 200, overlap: int = 30) -> List[Dict[str, Any]]:
     """
@@ -117,47 +117,61 @@ async def index_and_search_rag(
     # 2. Compute Dense Embeddings & Index into Postgres
     query_vec = generate_dense_384_embedding(query)
 
-    async with AsyncSessionLocal() as session:
-        # Clear previous collection chunks if any
-        await session.execute(
-            text("DELETE FROM vector_documents WHERE collection_name = :coll"),
-            {"coll": collection_name}
-        )
+    dense_sims = {}
+    try:
+        async with AsyncSessionLocal() as session:
+            # Clear previous collection chunks if any
+            await session.execute(
+                text("DELETE FROM vector_documents WHERE collection_name = :coll"),
+                {"coll": collection_name}
+            )
 
+            for c in chunks:
+                c_vec = generate_dense_384_embedding(c["text"])
+                c_vec_str = "[" + ",".join(map(str, c_vec)) + "]"
+                await session.execute(
+                    text("""
+                        INSERT INTO vector_documents (id, collection_name, document_name, chunk_index, text, embedding, metadata_json, created_at)
+                        VALUES (gen_random_uuid(), :coll, :doc, :idx, :txt, CAST(:emb AS vector), CAST(:meta AS jsonb), NOW())
+                    """),
+                    {
+                        "coll": collection_name,
+                        "doc": document_name,
+                        "idx": c["chunk_index"],
+                        "txt": c["text"],
+                        "emb": c_vec_str,
+                        "meta": json.dumps({"char_span": c["char_span"]})
+                    }
+                )
+            await session.commit()
+
+            # Query using pgvector cosine distance: embedding <=> query_vec
+            query_vec_str = "[" + ",".join(map(str, query_vec)) + "]"
+            result = await session.execute(
+                text("""
+                    SELECT chunk_index, text, 1 - (embedding <=> CAST(:q_vec AS vector)) AS cosine_sim
+                    FROM vector_documents
+                    WHERE collection_name = :coll
+                    ORDER BY cosine_sim DESC
+                    LIMIT :limit;
+                """),
+                {"coll": collection_name, "q_vec": query_vec_str, "limit": len(chunks)}
+            )
+            pg_rows = result.fetchall()
+            dense_ranks = {row[0]: (idx + 1, float(row[2])) for idx, row in enumerate(pg_rows)}
+    except Exception:
+        # Fallback to direct NumPy cosine similarity calculation for SQLite / non-Postgres environments
+        q_norm = np.linalg.norm(query_vec)
+        chunk_scores = []
         for c in chunks:
             c_vec = generate_dense_384_embedding(c["text"])
-            c_vec_str = "[" + ",".join(map(str, c_vec)) + "]"
-            await session.execute(
-                text("""
-                    INSERT INTO vector_documents (id, collection_name, document_name, chunk_index, text, embedding, metadata_json, created_at)
-                    VALUES (gen_random_uuid(), :coll, :doc, :idx, :txt, CAST(:emb AS vector), CAST(:meta AS jsonb), NOW())
-                """),
-                {
-                    "coll": collection_name,
-                    "doc": document_name,
-                    "idx": c["chunk_index"],
-                    "txt": c["text"],
-                    "emb": c_vec_str,
-                    "meta": json.dumps({"char_span": c["char_span"]})
-                }
-            )
-        await session.commit()
-
-        # Query using pgvector cosine distance: embedding <=> query_vec
-        query_vec_str = "[" + ",".join(map(str, query_vec)) + "]"
-        result = await session.execute(
-            text("""
-                SELECT chunk_index, text, 1 - (embedding <=> CAST(:q_vec AS vector)) AS cosine_sim
-                FROM vector_documents
-                WHERE collection_name = :coll
-                ORDER BY cosine_sim DESC
-                LIMIT :limit;
-            """),
-            {"coll": collection_name, "q_vec": query_vec_str, "limit": len(chunks)}
-        )
-        pg_rows = result.fetchall()
-
-    dense_ranks = {row[0]: (idx + 1, float(row[2])) for idx, row in enumerate(pg_rows)}
+            c_norm = np.linalg.norm(c_vec)
+            sim = float(np.dot(query_vec, c_vec) / (q_norm * c_norm + 1e-9))
+            chunk_scores.append((c["chunk_index"], sim))
+        
+        # Sort descending by similarity
+        chunk_scores.sort(key=lambda x: x[1], reverse=True)
+        dense_ranks = {item[0]: (idx + 1, item[1]) for idx, item in enumerate(chunk_scores)}
 
     # 3. Hybrid Reciprocal Rank Fusion (RRF): RRF = 1 / (60 + rank_dense) + 1 / (60 + rank_bm25)
     sorted_bm25_indices = np.argsort(bm25_scores)[::-1]

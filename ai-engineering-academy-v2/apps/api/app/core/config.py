@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     MAX_CONCURRENT_JOBS: int = 4
     MAX_JOB_EXECUTION_SECONDS: int = 300
     MAX_UPLOAD_SIZE_MB: int = 25
+    STORAGE_DIR: str = os.getenv("STORAGE_DIR", "./data_storage")
     
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",

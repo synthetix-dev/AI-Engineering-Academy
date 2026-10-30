@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from typing import Any, Dict, List, Tuple
-from backend.app.core.config import settings
+from app.core.config import settings
 
 class LoRALinear(nn.Module):
     """
