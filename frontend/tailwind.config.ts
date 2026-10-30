@@ -27,29 +27,43 @@ const config: Config = {
           700: "#B83A0E",
         },
         cloud: "#EDF5FE",
-        graphite: "#24292F",
+        navy: {
+          DEFAULT: "#0D2238",
+          800: "#132D48",
+          900: "#0D2238",
+          950: "#071626",
+        },
+        graphite: "#0D2238",
         borderline: "#D0D7DE",
         neutralSurface: "#E8E8E8",
-        oxide: "#5D0D02",
         dark: {
-          bg: "#0D1117",
-          surface: "#161B22",
-          border: "#30363D",
+          bg: "#0A1624",
+          surface: "#102235",
+          border: "#1C354E",
           text: "#E6EDF3",
           muted: "#8B949E"
         }
       },
       fontFamily: {
+        display: [
+          "var(--font-display)",
+          "Rubik",
+          "Bricolage Grotesque",
+          "-apple-system",
+          "system-ui",
+          "sans-serif"
+        ],
         sans: [
+          "var(--font-sans)",
+          "Manrope",
           "-apple-system",
           "BlinkMacSystemFont",
           "Segoe UI",
           "Noto Sans",
-          "Helvetica",
-          "Arial",
           "sans-serif"
         ],
         mono: [
+          "JetBrains Mono",
           "ui-monospace",
           "SFMono-Regular",
           "SF Mono",

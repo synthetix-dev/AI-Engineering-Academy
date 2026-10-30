@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800;12..96,900&family=Manrope:wght@400;500;600;700;800&family=Rubik:wght@700;800;900&display=swap&subset=cyrillic,cyrillic-ext,latin');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -7,34 +9,42 @@
   --color-tangerine: #EC612F;
   --color-cloud: #EDF5FE;
   --color-base: #FFFFFF;
-  --color-graphite: #24292F;
+  --color-graphite: #0D2238;
+  --color-navy: #0D2238;
   --color-border: #D0D7DE;
   --color-neutral: #E8E8E8;
-  --color-oxide: #5D0D02;
+  --font-display: 'Rubik', 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .dark {
-  --color-cloud: #0D1117;
-  --color-base: #161B22;
+  --color-cloud: #0A1624;
+  --color-base: #102235;
   --color-graphite: #E6EDF3;
-  --color-border: #30363D;
-  --color-neutral: #21262D;
+  --color-navy: #E6EDF3;
+  --color-border: #1C354E;
+  --color-neutral: #172B40;
 }
 
 body {
   background-color: var(--color-cloud);
   color: var(--color-graphite);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
   margin: 0;
   padding: 0;
   -webkit-font-smoothing: antialiased;
 }
 
+/* Display Headings */
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+}
+
 /* GitHub-inspired clean tabs */
 .tab-active {
   border-bottom: 2px solid #EC612F;
-  color: #24292F;
-  font-weight: 600;
+  color: #0D2238;
+  font-weight: 700;
 }
 .dark .tab-active {
   border-bottom: 2px solid #EC612F;
@@ -43,8 +53,8 @@ body {
 
 /* Minimalist scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -54,5 +64,5 @@ body {
   border-radius: 4px;
 }
 .dark ::-webkit-scrollbar-thumb {
-  background: #30363D;
+  background: #1C354E;
 }

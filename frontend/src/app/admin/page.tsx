@@ -34,7 +34,7 @@ export default function AdminTelemetryPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-borderline pb-4 dark:border-dark-border">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-graphite dark:text-dark-text flex items-center gap-2">

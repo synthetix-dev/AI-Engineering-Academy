@@ -14,9 +14,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="uk" suppressHydrationWarning>
-      <body className="min-h-screen flex flex-col bg-cloud text-graphite dark:bg-dark-bg dark:text-dark-text antialiased">
+      <body className="min-h-screen flex flex-col bg-cloud text-navy dark:bg-dark-bg dark:text-dark-text antialiased selection:bg-tangerine selection:text-white">
         <Header />
-        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        <main className="flex-1 w-full">
           {children}
         </main>
         <Footer />
