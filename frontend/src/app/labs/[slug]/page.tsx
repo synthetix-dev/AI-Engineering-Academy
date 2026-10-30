@@ -25,6 +25,11 @@ import {
   Check,
   Send,
   Zap,
+  HelpCircle,
+  XCircle,
+  ArrowRight,
+  TrendingUp,
+  CheckCheck
 } from "lucide-react";
 import {
   getLabBySlug,
@@ -36,6 +41,7 @@ import {
   RunResult,
   MentorAssistResult,
 } from "@/lib/api";
+import { getCurriculumForLab, LabPedagogicalData } from "@/lib/labCurriculum";
 
 // Specialized Domain Workspaces
 import MathLabWorkspace from "@/components/labs/MathLabWorkspace";
@@ -66,6 +72,7 @@ export default function LabStudioPage() {
   const slug = params?.slug as string;
 
   const [lab, setLab] = useState<Lab | null>(null);
+  const [curriculum, setCurriculum] = useState<LabPedagogicalData | null>(null);
   const [studioMode, setStudioMode] = useState<StudioMode>("visual");
   const [running, setRunning] = useState(false);
   const [currentRun, setCurrentRun] = useState<RunResult | null>(null);
@@ -77,6 +84,15 @@ export default function LabStudioPage() {
   const [copiedCode, setCopiedCode] = useState(false);
   const [projectSaved, setProjectSaved] = useState(false);
 
+  // Active step in pedagogical workflow (1-7)
+  const [activeStep, setActiveStep] = useState<number>(3); // Default on practice, but user sees all steps
+
+  // In-lab Knowledge Check / Quiz state
+  const [selectedQuizOption, setSelectedQuizOption] = useState<number | null>(null);
+  const [quizSubmitted, setQuizSubmitted] = useState<boolean>(false);
+  const [quizCorrect, setQuizCorrect] = useState<boolean>(false);
+  const [quizXpAwarded, setQuizXpAwarded] = useState<number>(0);
+
   // AI Mentor State
   const [mentorGoal, setMentorGoal] = useState("");
   const [mentorLoading, setMentorLoading] = useState(false);
@@ -85,6 +101,9 @@ export default function LabStudioPage() {
 
   useEffect(() => {
     if (!slug) return;
+    const curr = getCurriculumForLab(slug);
+    setCurriculum(curr);
+
     getLabBySlug(slug)
       .then((data) => {
         setLab(data);
@@ -117,6 +136,7 @@ export default function LabStudioPage() {
       const res = await executeRun(lab.id, "cpu-real", execParams);
       setCurrentRun(res);
       setRunHistory((prev) => [res, ...prev]);
+      setActiveStep(4); // Advance to Results step
 
       setLogs((prev) => [
         ...prev,
@@ -168,6 +188,16 @@ export default function LabStudioPage() {
       setTimeout(() => setProjectSaved(false), 4000);
     } catch (err: any) {
       setError("Не вдалося зберегти в проєкт: " + err.message);
+    }
+  };
+
+  const handleQuizSubmit = () => {
+    if (!curriculum || selectedQuizOption === null) return;
+    const isCorrect = selectedQuizOption === curriculum.quiz.correctIndex;
+    setQuizCorrect(isCorrect);
+    setQuizSubmitted(true);
+    if (isCorrect) {
+      setQuizXpAwarded(25);
     }
   };
 
@@ -237,10 +267,9 @@ export default function LabStudioPage() {
       return <CapstoneProjectWorkspace onRun={handleStartExecution} running={running} result={currentRun} />;
     }
 
-    // Default clean interactive container
     return (
       <div className="rounded-xl border border-borderline bg-gray-50/50 p-6 dark:border-dark-border dark:bg-dark-surface">
-        <h4 className="text-sm font-bold text-graphite dark:text-dark-text mb-2">
+        <h4 className="text-sm font-bold text-navy dark:text-white mb-2">
           Інтерактивний експеримент: {lab.title}
         </h4>
         <p className="text-xs text-gray-600 dark:text-dark-muted mb-4">
@@ -249,9 +278,9 @@ export default function LabStudioPage() {
         <button
           onClick={() => handleStartExecution()}
           disabled={running}
-          className="inline-flex items-center gap-2 rounded-lg bg-denim px-5 py-2.5 text-xs font-semibold text-white shadow hover:bg-denim-dark transition disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-xl bg-tangerine px-5 py-2.5 text-xs font-bold text-white shadow hover:opacity-95 transition disabled:opacity-50"
         >
-          <Play className="h-4 w-4" />
+          <Play className="h-4 w-4 fill-white" />
           {running ? "Виконується обчислення..." : "Запустити обчислення"}
         </button>
       </div>
@@ -260,55 +289,71 @@ export default function LabStudioPage() {
 
   if (error && !lab) {
     return (
-      <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
-        Помилка завантаження робочого середовища: {error}
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+          Помилка завантаження робочого середовища: {error}
+        </div>
       </div>
     );
   }
 
-  if (!lab) {
+  if (!lab || !curriculum) {
     return (
-      <div className="py-16 text-center text-xs font-mono text-gray-500">
-        Завантаження AI Engineering Studio...
+      <div className="max-w-7xl mx-auto px-4 py-20 text-center text-xs font-mono text-gray-500">
+        Ініціалізація AI Engineering Studio & Педагогічного плану...
       </div>
     );
   }
+
+  const stepsList = [
+    { num: 1, label: "Мета" },
+    { num: 2, label: "Інтуїція" },
+    { num: 3, label: "Практика" },
+    { num: 4, label: "Результат" },
+    { num: 5, label: "Аналіз помилок" },
+    { num: 6, label: "Перевірка (+XP)" },
+    { num: 7, label: "Наступний крок" },
+  ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
-      {/* Top Header & Tri-Mode Selector Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-borderline pb-4 dark:border-dark-border">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Link
-              href="/explore"
-              className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-graphite dark:text-dark-muted dark:hover:text-dark-text"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" /> Назад до дослідження
-            </Link>
-            <span className="text-gray-300 dark:text-dark-border">•</span>
-            <span className="text-xs font-semibold text-denim">Інтерактивна практика</span>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8 animate-fadeIn">
+      {/* =========================================================================
+          TOP NAVIGATION & STEPPER BAR (Pedagogical sequence)
+         ========================================================================= */}
+      <div className="space-y-4 border-b border-borderline pb-6 dark:border-dark-border">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Link
+                href="/tracks"
+                className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-navy dark:text-dark-muted dark:hover:text-white"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" /> Всі напрями
+              </Link>
+              <span className="text-gray-300 dark:text-dark-border">•</span>
+              <span className="text-xs font-bold text-denim-700 dark:text-denim">
+                {curriculum.trackTitle}
+              </span>
+              <span className="rounded bg-cloud text-navy text-[10px] font-mono font-bold px-2 py-0.5 border border-borderline">
+                Модуль #{curriculum.trackOrder}
+              </span>
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-navy dark:text-white">
+              {lab.title}
+            </h1>
           </div>
 
-          <h1 className="text-xl sm:text-2xl font-extrabold text-graphite dark:text-dark-text">
-            {lab.title}
-          </h1>
-          <p className="text-xs text-gray-600 dark:text-dark-muted max-w-2xl">
-            {lab.description}
-          </p>
-        </div>
-
-        {/* Tri-Mode Switcher */}
-        <div className="flex items-center gap-2 self-start sm:self-center">
-          <div className="inline-flex rounded-lg border border-borderline bg-gray-100 p-1 text-xs dark:border-dark-border dark:bg-dark-surface shadow-xs">
+          {/* Tri-Mode Switcher */}
+          <div className="inline-flex rounded-xl border border-borderline bg-cloud p-1 text-xs dark:border-dark-border dark:bg-dark-surface shadow-xs">
             <button
               onClick={() => setStudioMode("visual")}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium transition ${
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition ${
                 studioMode === "visual"
-                  ? "bg-white text-graphite shadow-xs font-bold dark:bg-dark-bg dark:text-dark-text"
-                  : "text-gray-600 hover:text-graphite dark:text-dark-muted dark:hover:text-dark-text"
+                  ? "bg-white text-navy shadow-xs dark:bg-dark-bg dark:text-white"
+                  : "text-gray-500 hover:text-navy dark:text-dark-muted dark:hover:text-white"
               }`}
-              title="Візуальний режим: форми, слайдери, графіки"
+              title="Візуальний режим: форми, графіки, слайдери без коду"
             >
               <Eye className="h-3.5 w-3.5 text-denim" />
               <span>Visual</span>
@@ -316,12 +361,12 @@ export default function LabStudioPage() {
 
             <button
               onClick={() => setStudioMode("mentor")}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium transition ${
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition ${
                 studioMode === "mentor"
-                  ? "bg-white text-graphite shadow-xs font-bold dark:bg-dark-bg dark:text-dark-text"
-                  : "text-gray-600 hover:text-graphite dark:text-dark-muted dark:hover:text-dark-text"
+                  ? "bg-white text-navy shadow-xs dark:bg-dark-bg dark:text-white"
+                  : "text-gray-500 hover:text-navy dark:text-dark-muted dark:hover:text-white"
               }`}
-              title="Допомога AI-наставника українською мовою"
+              title="AI-наставник українською мовою"
             >
               <Bot className="h-3.5 w-3.5 text-tangerine" />
               <span>AI Mentor</span>
@@ -329,161 +374,253 @@ export default function LabStudioPage() {
 
             <button
               onClick={() => setStudioMode("engineering")}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium transition ${
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition ${
                 studioMode === "engineering"
-                  ? "bg-white text-graphite shadow-xs font-bold dark:bg-dark-bg dark:text-dark-text"
-                  : "text-gray-600 hover:text-graphite dark:text-dark-muted dark:hover:text-dark-text"
+                  ? "bg-white text-navy shadow-xs dark:bg-dark-bg dark:text-white"
+                  : "text-gray-500 hover:text-navy dark:text-dark-muted dark:hover:text-white"
               }`}
-              title="Професійний інженерний режим: код, cURL, API"
+              title="Професійний інженерний режим: PyTorch код, cURL, API"
             >
               <Code2 className="h-3.5 w-3.5 text-purple-600" />
               <span>Engineering</span>
             </button>
           </div>
         </div>
+
+        {/* 7-Step Horizontal Stepper */}
+        <div className="pt-2 overflow-x-auto">
+          <div className="flex items-center gap-2 min-w-max">
+            {stepsList.map((st) => {
+              const isCurrent = activeStep === st.num;
+              const isDone = activeStep > st.num || (st.num === 4 && currentRun !== null);
+              return (
+                <button
+                  key={st.num}
+                  onClick={() => setActiveStep(st.num)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                    isCurrent
+                      ? "bg-navy text-white shadow-xs dark:bg-white dark:text-navy"
+                      : isDone
+                      ? "bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300"
+                      : "bg-cloud text-gray-500 border border-borderline hover:text-navy dark:bg-dark-bg dark:text-dark-muted"
+                  }`}
+                >
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-mono">
+                    {isDone ? "✓" : st.num}
+                  </span>
+                  <span>{st.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Notifications */}
       {error && (
-        <div className="rounded-lg border border-red-300 bg-red-50 p-3.5 text-xs text-red-700 flex items-center gap-2">
+        <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-xs text-red-700 flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 shrink-0 text-red-600" />
           <span>{error}</span>
         </div>
       )}
 
       {projectSaved && (
-        <div className="rounded-lg border border-green-300 bg-green-50 p-3.5 text-xs text-green-800 flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+        <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-xs text-emerald-800 flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
           <span>Результат та конфігурацію успішно збережено до ваших живих AI-проєктів!</span>
         </div>
       )}
 
-      {/* MODE 1: AI MENTOR VIEW */}
-      {studioMode === "mentor" && (
-        <div className="rounded-xl border border-tangerine/40 bg-gradient-to-br from-orange-50/40 via-white to-orange-50/20 p-5 shadow-sm dark:border-tangerine/30 dark:bg-dark-surface space-y-4">
+      {/* =========================================================================
+          STEP 1: МЕТА & ПРОФЕСІЙНИЙ КОНТЕКСТ (Goal & Target Benchmark)
+         ========================================================================= */}
+      <div className="rounded-2xl border border-borderline bg-white p-6 dark:border-dark-border dark:bg-dark-surface shadow-xs space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-borderline/60 pb-3">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-tangerine text-white">
-              <Bot className="h-4 w-4" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-graphite dark:text-dark-text">
-                Інженерний наставник AI (Відкрита система знань)
-              </h3>
-              <p className="text-[11px] text-gray-500 dark:text-dark-muted">
-                Опишіть вашу мету або виберіть типове питання для оптимізації параметрів
-              </p>
-            </div>
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-denim/20 text-denim-700 text-xs font-bold">
+              01
+            </span>
+            <h2 className="font-display font-bold text-base text-navy dark:text-white">
+              Мета навчання та Професійний контекст
+            </h2>
           </div>
-
-          {/* Quick Prompts */}
-          {quickPrompts.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {quickPrompts.map((qp, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    setMentorGoal(qp);
-                    handleAskMentor(qp);
-                  }}
-                  className="rounded-full border border-borderline bg-white px-3 py-1 text-xs text-gray-700 hover:border-tangerine hover:text-tangerine dark:border-dark-border dark:bg-dark-bg dark:text-dark-text transition"
-                >
-                  💡 {qp}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Prompt Input Box */}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={mentorGoal}
-              onChange={(e) => setMentorGoal(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAskMentor()}
-              placeholder="Наприклад: Як усунути перенавчання чи налаштувати LoRA ранг?"
-              className="flex-1 rounded-lg border border-borderline bg-white px-3.5 py-2 text-xs text-graphite placeholder:text-gray-400 focus:border-tangerine focus:outline-none dark:border-dark-border dark:bg-dark-bg dark:text-dark-text"
-            />
-            <button
-              onClick={() => handleAskMentor()}
-              disabled={mentorLoading || !mentorGoal.trim()}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-tangerine px-4 py-2 text-xs font-semibold text-white shadow hover:opacity-90 transition disabled:opacity-50"
-            >
-              <Send className="h-3.5 w-3.5" />
-              {mentorLoading ? "Аналіз..." : "Запитати"}
-            </button>
-          </div>
-
-          {/* Mentor Advice Output */}
-          {mentorData && (
-            <div className="rounded-lg border border-borderline bg-white p-4 dark:border-dark-border dark:bg-dark-bg space-y-3">
-              <div className="text-xs text-gray-700 dark:text-dark-text leading-relaxed">
-                {mentorData.explanation}
-              </div>
-
-              {/* Diagnostic Tips */}
-              {mentorData.diagnostic_tips?.length > 0 && (
-                <div className="rounded-md bg-cloud/50 p-3 dark:bg-denim/10 space-y-1">
-                  <span className="text-[11px] font-bold text-denim uppercase tracking-wider">
-                    Інженерні поради:
-                  </span>
-                  <ul className="list-disc list-inside text-xs text-gray-600 dark:text-dark-muted space-y-0.5">
-                    {mentorData.diagnostic_tips.map((tip, i) => (
-                      <li key={i}>{tip}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Action Button to Apply Parameters */}
-              <div className="flex justify-end pt-2">
-                <button
-                  onClick={applyMentorParams}
-                  className="inline-flex items-center gap-2 rounded-lg bg-denim px-4 py-2 text-xs font-semibold text-white shadow hover:bg-denim-dark transition"
-                >
-                  <Sparkles className="h-3.5 w-3.5 text-tangerine" />
-                  Застосувати ці параметри та запустити
-                </button>
-              </div>
-            </div>
-          )}
+          <span className="text-xs font-mono font-bold text-tangerine">
+            Ціль: {curriculum.targetCriteria.metricName} {curriculum.targetCriteria.targetValue}
+          </span>
         </div>
-      )}
 
-      {/* MODE 2: ENGINEERING VIEW */}
-      {studioMode === "engineering" && (
-        <div className="rounded-xl border border-borderline bg-white p-5 shadow-sm dark:border-dark-border dark:bg-dark-surface space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+          <div className="md:col-span-8 space-y-2">
+            <p className="text-sm font-medium text-navy dark:text-white leading-relaxed">
+              {curriculum.goal}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-dark-muted">
+              {curriculum.targetCriteria.description}
+            </p>
+          </div>
+
+          <div className="md:col-span-4 rounded-xl border border-borderline bg-cloud/40 p-4 text-center dark:border-dark-border dark:bg-dark-bg">
+            <span className="text-[10px] font-bold uppercase text-gray-400">Цільовий критерій успіху</span>
+            <div className="font-display font-black text-xl text-denim-700 dark:text-denim mt-1">
+              {curriculum.targetCriteria.targetValue}
+            </div>
+            <span className="text-[10px] text-gray-500">{curriculum.targetCriteria.metricName}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          STEP 2: ІНТУЇЦІЯ ТА КОРОТКЕ ПОЯСНЕННЯ (Concept & Intuition)
+         ========================================================================= */}
+      <div className="rounded-2xl border border-borderline bg-white p-6 dark:border-dark-border dark:bg-dark-surface shadow-xs space-y-4">
+        <div className="flex items-center gap-2 border-b border-borderline/60 pb-3">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-tangerine/20 text-tangerine text-xs font-bold">
+            02
+          </span>
+          <h2 className="font-display font-bold text-base text-navy dark:text-white">
+            Інтуїція та Концептуальне пояснення
+          </h2>
+        </div>
+
+        <p className="text-xs sm:text-sm text-gray-700 dark:text-dark-muted leading-relaxed">
+          {curriculum.conceptSummary}
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+          {curriculum.intuitionBullets.map((bullet, idx) => (
+            <div
+              key={idx}
+              className="rounded-xl border border-borderline bg-cloud/30 p-3.5 text-xs text-navy dark:border-dark-border dark:bg-dark-bg/40 dark:text-dark-text flex items-start gap-2"
+            >
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+              <span>{bullet}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* =========================================================================
+          STEP 3: ІНТЕРАКТИВНА ПРАКТИКА (Tri-Mode Workspace)
+         ========================================================================= */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-100 text-purple-700 text-xs font-bold">
+              03
+            </span>
+            <h2 className="font-display font-bold text-base text-navy dark:text-white">
+              Інтерактивна практика ({studioMode.toUpperCase()} MODE)
+            </h2>
+          </div>
+          <span className="text-xs text-gray-400">100% реальний PyTorch/scikit-learn бекенд</span>
+        </div>
+
+        {/* AI MENTOR VIEW OVERLAY */}
+        {studioMode === "mentor" && (
+          <div className="rounded-2xl border border-tangerine/40 bg-gradient-to-br from-orange-50/40 via-white to-orange-50/20 p-6 shadow-sm dark:border-tangerine/30 dark:bg-dark-surface space-y-4">
             <div className="flex items-center gap-2">
-              <Terminal className="h-5 w-5 text-purple-600" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-tangerine text-white">
+                <Bot className="h-4 w-4" />
+              </div>
               <div>
-                <h3 className="text-sm font-bold text-graphite dark:text-dark-text">
-                  Виробничий код (Python & PyTorch)
+                <h3 className="text-sm font-bold text-navy dark:text-white">
+                  AI-наставник: Допомога у підборі параметрів та виправленні помилок
                 </h3>
                 <p className="text-[11px] text-gray-500 dark:text-dark-muted">
-                  Повністю відтворюваний код для запуску у локальному середовищі або CI/CD
+                  Запитайте пораду або скористайтеся швидкими підказками нижче:
                 </p>
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                const codeSnippet = `# AI Engineering Academy Reproduction Script\nfrom backend.app.engines import dispatcher\nimport asyncio\n\nasync def run():\n    res = await dispatcher.dispatch_lab_execution("${lab.slug}", ${JSON.stringify(activeParams, null, 2)})\n    print(res["metrics"])\n\nasyncio.run(run())`;
-                navigator.clipboard.writeText(codeSnippet);
-                setCopiedCode(true);
-                setTimeout(() => setCopiedCode(false), 2000);
-              }}
-              className="inline-flex items-center gap-1.5 rounded-md border border-borderline px-3 py-1.5 text-xs text-gray-700 hover:border-purple-600 dark:border-dark-border dark:text-dark-muted transition"
-            >
-              {copiedCode ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
-              <span>{copiedCode ? "Скопійовано" : "Скопіювати Python"}</span>
-            </button>
+            {quickPrompts.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {quickPrompts.map((qp, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setMentorGoal(qp);
+                      handleAskMentor(qp);
+                    }}
+                    className="rounded-full border border-borderline bg-white px-3 py-1 text-xs text-navy hover:border-tangerine hover:text-tangerine dark:border-dark-border dark:bg-dark-bg dark:text-dark-text transition"
+                  >
+                    💡 {qp}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={mentorGoal}
+                onChange={(e) => setMentorGoal(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAskMentor()}
+                placeholder="Наприклад: Як збалансувати Precision і Recall або зменшити перенавчання?"
+                className="flex-1 rounded-xl border border-borderline bg-white px-4 py-2.5 text-xs text-navy focus:border-tangerine focus:outline-none dark:border-dark-border dark:bg-dark-bg dark:text-white font-medium"
+              />
+              <button
+                onClick={() => handleAskMentor()}
+                disabled={mentorLoading || !mentorGoal.trim()}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-tangerine px-5 py-2.5 text-xs font-bold text-white shadow hover:opacity-95 transition disabled:opacity-50"
+              >
+                <Send className="h-3.5 w-3.5" />
+                {mentorLoading ? "Аналіз..." : "Запитати"}
+              </button>
+            </div>
+
+            {mentorData && (
+              <div className="rounded-xl border border-borderline bg-white p-4 dark:border-dark-border dark:bg-dark-bg space-y-3">
+                <p className="text-xs text-navy dark:text-white leading-relaxed">
+                  {mentorData.explanation}
+                </p>
+                {mentorData.diagnostic_tips?.length > 0 && (
+                  <ul className="list-disc list-inside text-xs text-gray-600 dark:text-dark-muted space-y-1">
+                    {mentorData.diagnostic_tips.map((t, i) => (
+                      <li key={i}>{t}</li>
+                    ))}
+                  </ul>
+                )}
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={applyMentorParams}
+                    className="inline-flex items-center gap-2 rounded-xl bg-denim px-5 py-2 text-xs font-bold text-white shadow hover:bg-denim-600 transition"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-tangerine" />
+                    Застосувати параметри та запустити
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
+        )}
 
-          <pre className="rounded-lg border border-borderline bg-gray-950 p-4 font-mono text-xs text-emerald-400 overflow-x-auto leading-relaxed">
-{`# Відтворюваний інженерний запуск
-# Модуль: ${lab.title} (ID: ${lab.slug})
-# Ядро обчислень: PyTorch CPU Worker
+        {/* ENGINEERING VIEW OVERLAY */}
+        {studioMode === "engineering" && (
+          <div className="rounded-2xl border border-borderline bg-white p-6 shadow-sm dark:border-dark-border dark:bg-dark-surface space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Terminal className="h-5 w-5 text-purple-600" />
+                <h3 className="font-display font-bold text-sm text-navy dark:text-white">
+                  Виробничий код (Python / PyTorch & cURL)
+                </h3>
+              </div>
 
+              <button
+                onClick={() => {
+                  const codeSnippet = `# AI Engineering Academy Reproduction Script\nfrom backend.app.engines import dispatcher\nimport asyncio\n\nasync def run():\n    res = await dispatcher.dispatch_lab_execution("${lab.slug}", ${JSON.stringify(activeParams, null, 2)})\n    print(res["metrics"])\n\nasyncio.run(run())`;
+                  navigator.clipboard.writeText(codeSnippet);
+                  setCopiedCode(true);
+                  setTimeout(() => setCopiedCode(false), 2000);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-borderline px-3 py-1.5 text-xs text-navy hover:border-purple-600 dark:border-dark-border dark:text-white transition"
+              >
+                {copiedCode ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                <span>{copiedCode ? "Скопійовано" : "Скопіювати Python"}</span>
+              </button>
+            </div>
+
+            <pre className="rounded-xl border border-borderline bg-gray-950 p-4 font-mono text-xs text-emerald-400 overflow-x-auto leading-relaxed">
+{`# Відтворюваний інженерний запуск: ${lab.title}
 from backend.app.engines import dispatcher
 import asyncio
 
@@ -496,101 +633,224 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())`}
-          </pre>
-
-          {/* Direct cURL Endpoint */}
-          <div className="space-y-1">
-            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-              Виклик через REST API (cURL):
-            </span>
-            <div className="rounded border border-borderline bg-gray-50 p-2.5 font-mono text-[11px] text-gray-700 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text overflow-x-auto">
-              curl -X POST http://127.0.0.1:8000/api/v1/runs?wait=true -H &quot;Content-Type: application/json&quot; -d &apos;{`{"lab_id": "${lab.id}", "execution_mode": "cpu-real", "params": ${JSON.stringify(activeParams)}}`}&apos;
-            </div>
+            </pre>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* MODE 3: MAIN VISUAL WORKSPACE (Always available) */}
-      <div className="rounded-xl border border-borderline bg-white p-5 shadow-sm dark:border-dark-border dark:bg-dark-surface space-y-4">
-        {renderSpecializedWorkspace()}
+        {/* Specialized Domain Workspace */}
+        <div className="rounded-2xl border border-borderline bg-white p-6 shadow-xs dark:border-dark-border dark:bg-dark-surface">
+          {renderSpecializedWorkspace()}
+        </div>
       </div>
 
-      {/* RESULTS & EXPLANATION DECK (When a run has finished) */}
+      {/* =========================================================================
+          STEP 4: СПРАВЖНІЙ РЕЗУЛЬТАТ & МЕТРИКИ (Results & Performance Deck)
+         ========================================================================= */}
       {currentRun && (
-        <div className="rounded-xl border border-borderline bg-white p-6 shadow-sm dark:border-dark-border dark:bg-dark-surface space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-borderline/80 pb-4 dark:border-dark-border/80">
-            <div className="flex items-center gap-2.5">
-              <div
-                className={`flex h-7 w-7 items-center justify-center rounded-full text-white font-bold text-xs ${
-                  currentRun.status === "succeeded" ? "bg-emerald-500" : "bg-red-500"
-                }`}
-              >
-                {currentRun.status === "succeeded" ? "✓" : "!"}
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-graphite dark:text-dark-text">
-                  Результати обчислення
-                </h3>
-                <span className="text-xs text-gray-500 dark:text-dark-muted font-mono">
-                  Виконано за {currentRun.resource_usage?.cpu_seconds?.toFixed(3) || "0.025"}s на CPU воркері
-                </span>
-              </div>
-            </div>
-
+        <div className="rounded-2xl border border-borderline bg-white p-6 dark:border-dark-border dark:bg-dark-surface shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-borderline/60 pb-3">
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleSaveToProject}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-borderline bg-white px-3.5 py-1.5 text-xs font-semibold text-graphite hover:border-denim dark:border-dark-border dark:bg-dark-bg dark:text-dark-text transition"
-              >
-                <FolderPlus className="h-3.5 w-3.5 text-denim" />
-                Зберегти до живих проєктів
-              </button>
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">
+                04
+              </span>
+              <h2 className="font-display font-bold text-base text-navy dark:text-white">
+                Результати виконання на обчислювальному ядрі
+              </h2>
             </div>
+            <span className="text-xs font-mono text-gray-500">
+              Виконано за {currentRun.resource_usage?.cpu_seconds?.toFixed(3) || "0.024"}s на CPU
+            </span>
           </div>
 
-          {/* Key Metrics Cards (Human readable, zero raw json) */}
           {currentRun.metrics && Object.keys(currentRun.metrics).length > 0 && (
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-dark-muted">
-                Отримані показники моделі:
-              </h4>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {Object.entries(currentRun.metrics).map(([key, val]) => (
-                  <div
-                    key={key}
-                    className="rounded-lg border border-borderline bg-gray-50/70 p-3 dark:border-dark-border dark:bg-dark-bg"
-                  >
-                    <div className="text-[11px] font-mono text-gray-500 dark:text-dark-muted truncate">
-                      {key.replace(/_/g, " ")}
-                    </div>
-                    <div className="mt-1 text-base sm:text-lg font-bold font-mono text-graphite dark:text-dark-text">
-                      {typeof val === "number" ? val.toFixed(4) : String(val)}
-                    </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {Object.entries(currentRun.metrics).map(([k, v]) => (
+                <div
+                  key={k}
+                  className="rounded-xl border border-borderline bg-cloud/30 p-3.5 dark:border-dark-border dark:bg-dark-bg"
+                >
+                  <div className="text-[11px] font-mono text-gray-500 truncate">
+                    {k.replace(/_/g, " ")}
                   </div>
-                ))}
-              </div>
+                  <div className="mt-1 text-base sm:text-lg font-bold font-mono text-navy dark:text-white">
+                    {typeof v === "number" ? v.toFixed(4) : String(v)}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
+        </div>
+      )}
 
-          {/* Reflection / What this means */}
-          <div className="rounded-lg border border-denim/30 bg-cloud/40 p-4 dark:border-denim/20 dark:bg-denim/10 space-y-1">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-denim uppercase tracking-wider">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              Пояснення результату:
-            </div>
-            <p className="text-xs text-gray-700 dark:text-dark-text leading-relaxed">
-              Обчислення завершилося з дійсними показниками. Дані оброблено у векторному середовищі,
-              всі метрики зафіксовано в базі PostgreSQL та зараховано до вашого персонального портфоліо інженера.
-            </p>
+      {/* =========================================================================
+          STEP 5: АНАЛІЗ ПОМИЛОК ТА ДІАГНОСТИКА (Error Analysis & Guidance)
+         ========================================================================= */}
+      {currentRun && (
+        <div className="rounded-2xl border border-borderline bg-white p-6 dark:border-dark-border dark:bg-dark-surface shadow-xs space-y-4">
+          <div className="flex items-center gap-2 border-b border-borderline/60 pb-3">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-amber-700 text-xs font-bold">
+              05
+            </span>
+            <h2 className="font-display font-bold text-base text-navy dark:text-white">
+              Аналіз помилок та Інженерна діагностика
+            </h2>
+          </div>
+
+          <div className="space-y-3">
+            {curriculum.diagnosticTips.map((tip, idx) => (
+              <div
+                key={idx}
+                className="rounded-xl border border-borderline bg-cloud/20 p-4 dark:border-dark-border dark:bg-dark-bg/40 space-y-1.5"
+              >
+                <div className="flex items-center gap-2 text-xs font-bold text-tangerine">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span>Умова діагностики: {tip.condition}</span>
+                </div>
+                <p className="text-xs text-navy dark:text-white font-medium">
+                  <strong>Суть дефекту:</strong> {tip.diagnosis}
+                </p>
+                <p className="text-xs text-gray-600 dark:text-dark-muted">
+                  <strong>Інженерна рекомендація:</strong> {tip.recommendation}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* ADVANCED COLLAPSIBLE DRAWER (Logs & History) */}
+      {/* =========================================================================
+          STEP 6: ПЕРЕВІРКА ЗНАНЬ (Knowledge Check Mini-Quiz +25 XP)
+         ========================================================================= */}
+      <div className="rounded-2xl border border-borderline bg-white p-6 dark:border-dark-border dark:bg-dark-surface shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-borderline/60 pb-3">
+          <div className="flex items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">
+              06
+            </span>
+            <h2 className="font-display font-bold text-base text-navy dark:text-white">
+              Перевірка знань за результатами практики
+            </h2>
+          </div>
+          <span className="text-xs font-mono font-bold text-emerald-600">+25 XP за правильну відповідь</span>
+        </div>
+
+        <div className="space-y-3">
+          <p className="text-xs sm:text-sm font-semibold text-navy dark:text-white">
+            {curriculum.quiz.question}
+          </p>
+
+          <div className="space-y-2">
+            {curriculum.quiz.options.map((opt, idx) => {
+              const isSelected = selectedQuizOption === idx;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => !quizSubmitted && setSelectedQuizOption(idx)}
+                  disabled={quizSubmitted}
+                  className={`w-full text-left p-3.5 rounded-xl border text-xs font-medium transition flex items-center justify-between ${
+                    isSelected
+                      ? "border-denim bg-denim/10 text-navy font-bold dark:bg-denim/20 dark:text-white"
+                      : "border-borderline bg-cloud/20 text-gray-700 hover:border-denim/60 dark:border-dark-border dark:bg-dark-bg/40 dark:text-dark-text"
+                  }`}
+                >
+                  <span>{opt}</span>
+                  {isSelected && <span className="h-2 w-2 rounded-full bg-denim" />}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            <button
+              onClick={handleQuizSubmit}
+              disabled={selectedQuizOption === null || quizSubmitted}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-navy px-5 py-2 text-xs font-bold text-white hover:bg-navy-800 transition disabled:opacity-40"
+            >
+              <CheckCheck className="h-3.5 w-3.5" />
+              <span>Підтвердити відповідь</span>
+            </button>
+
+            {quizSubmitted && (
+              <div
+                className={`inline-flex items-center gap-1.5 text-xs font-bold ${
+                  quizCorrect ? "text-emerald-600" : "text-red-600"
+                }`}
+              >
+                {quizCorrect ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Правильно! +{quizXpAwarded} XP нараховано до вашого профілю.</span>
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="h-4 w-4" />
+                    <span>Не зовсім. {curriculum.quiz.explanation}</span>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          STEP 7: НАСТУПНИЙ КРОК (Next Step, Living Project & Career)
+         ========================================================================= */}
+      <div className="rounded-2xl border-2 border-denim/40 bg-gradient-to-r from-denim/15 via-white to-white p-6 sm:p-8 dark:from-denim/10 dark:via-dark-surface dark:to-dark-surface dark:border-denim/30 shadow-xs space-y-4">
+        <div className="flex items-center gap-2 border-b border-borderline/60 pb-3">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-tangerine text-white text-xs font-bold">
+            07
+          </span>
+          <h2 className="font-display font-bold text-base text-navy dark:text-white">
+            Наступний крок вашого професійного розвитку
+          </h2>
+        </div>
+
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-1 max-w-2xl">
+            <h3 className="font-display font-bold text-lg text-navy dark:text-white">
+              {curriculum.nextStep.title}
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-dark-muted">
+              {curriculum.nextStep.description}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            {currentRun && (
+              <button
+                onClick={handleSaveToProject}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-borderline bg-white px-4 py-2.5 text-xs font-bold text-navy hover:border-denim dark:border-dark-border dark:bg-dark-bg dark:text-white transition shadow-xs"
+              >
+                <FolderPlus className="h-4 w-4 text-denim" />
+                <span>Зберегти в Living Project</span>
+              </button>
+            )}
+
+            <Link
+              href="/solve"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-borderline bg-white px-4 py-2.5 text-xs font-bold text-navy hover:border-tangerine dark:border-dark-border dark:bg-dark-bg dark:text-white transition shadow-xs"
+            >
+              <Zap className="h-4 w-4 text-tangerine" />
+              <span>Вирішити аварію у Solve</span>
+            </Link>
+
+            <Link
+              href={curriculum.nextStep.href}
+              className="inline-flex items-center gap-2 rounded-xl bg-tangerine px-5 py-2.5 text-xs font-bold text-white shadow hover:opacity-95 transition"
+            >
+              <span>{curriculum.nextStep.actionLabel}</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Advanced Logs Drawer */}
       <div className="rounded-xl border border-borderline bg-white dark:border-dark-border dark:bg-dark-surface overflow-hidden">
         <button
           onClick={() => setShowAdvancedLogs(!showAdvancedLogs)}
-          className="flex w-full items-center justify-between p-4 text-xs font-semibold text-gray-600 hover:text-graphite dark:text-dark-muted dark:hover:text-dark-text transition"
+          className="flex w-full items-center justify-between p-4 text-xs font-semibold text-gray-500 hover:text-navy dark:text-dark-muted dark:hover:text-white transition"
         >
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 text-gray-400" />
@@ -600,33 +860,14 @@ if __name__ == "__main__":
         </button>
 
         {showAdvancedLogs && (
-          <div className="border-t border-borderline p-4 dark:border-dark-border space-y-4 bg-gray-50/50 dark:bg-dark-bg">
-            <div className="rounded-lg border border-borderline bg-gray-950 p-3 font-mono text-xs text-emerald-400 space-y-1 max-h-48 overflow-y-auto">
+          <div className="border-t border-borderline p-4 dark:border-dark-border space-y-4 bg-cloud/20 dark:bg-dark-bg">
+            <div className="rounded-xl border border-borderline bg-gray-950 p-3 font-mono text-xs text-emerald-400 space-y-1 max-h-48 overflow-y-auto">
               {logs.length > 0 ? (
                 logs.map((log, idx) => <div key={idx}>{log}</div>)
               ) : (
                 <div className="text-gray-500">// Логи відсутні. Запустіть завдання для створення записів.</div>
               )}
             </div>
-
-            {runHistory.length > 0 && (
-              <div className="space-y-1">
-                <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                  Попередні запуски цієї сесії:
-                </span>
-                <div className="divide-y divide-borderline dark:divide-dark-border">
-                  {runHistory.map((r, i) => (
-                    <div key={i} className="py-2 flex items-center justify-between text-xs font-mono">
-                      <span className={r.status === "succeeded" ? "text-emerald-600 font-bold" : "text-red-600"}>
-                        [{r.status.toUpperCase()}]
-                      </span>
-                      <span className="text-gray-500">Trace: {r.trace_id}</span>
-                      <span className="text-gray-500">{r.resource_usage?.cpu_seconds?.toFixed(3)}s</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Play, RotateCcw, Cpu, BarChart2, CheckCircle2, Sliders } from "lucide-react";
+import { Play, RotateCcw, Cpu, BarChart2, CheckCircle2, Sliders, AlertTriangle, Info, TrendingUp } from "lucide-react";
 
 interface MLLabProps {
   onRun: (params: any) => void;
@@ -10,13 +10,15 @@ interface MLLabProps {
 }
 
 export default function MLLabWorkspace({ onRun, running, result }: MLLabProps) {
+  const [datasetName, setDatasetName] = useState<string>("synthetic");
+  const [scenario, setScenario] = useState<string>("fraud");
   const [algorithm, setAlgorithm] = useState<string>("random_forest");
   const [nEstimators, setNEstimators] = useState<number>(50);
   const [maxDepth, setMaxDepth] = useState<number>(6);
   const [threshold, setThreshold] = useState<number>(0.5);
-  const [testSize, setTestSize] = useState<number>(0.2);
+  const [testSize, setTestSize] = useState<number>(0.25);
 
-  // Get metrics and artifacts from result if present
+  // Dynamic metrics from actual run or initial baseline
   const metrics = result?.metrics || {
     accuracy: 0.884,
     precision: 0.865,
@@ -30,13 +32,25 @@ export default function MLLabWorkspace({ onRun, running, result }: MLLabProps) {
     [12, 128],
   ];
 
+  const tn = cm[0]?.[0] || 0;
+  const fp = cm[0]?.[1] || 0;
+  const fn = cm[1]?.[0] || 0;
+  const tp = cm[1]?.[1] || 0;
+
+  // Real cost calculation based on business scenario
+  // In fraud detection: FN cost = $500 (undetected fraud), FP cost = $10 (temporary card block)
+  const estimatedCost = scenario === "fraud"
+    ? fn * 500 + fp * 10
+    : fn * 100 + fp * 20;
+
   const handleExecute = () => {
     onRun({
       algorithm: algorithm,
-      dataset_name: "synthetic",
+      dataset_name: datasetName,
       n_estimators: nEstimators,
       max_depth: maxDepth,
       test_size: testSize,
+      decision_threshold: threshold,
       seed: 42,
     });
   };
@@ -45,33 +59,70 @@ export default function MLLabWorkspace({ onRun, running, result }: MLLabProps) {
     <div className="space-y-6">
       {/* Configuration Card */}
       <div className="rounded-xl border border-borderline bg-white p-5 shadow-sm dark:border-dark-border dark:bg-dark-surface">
-        <div className="flex items-center justify-between border-b border-borderline/60 pb-3 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-borderline/60 pb-3 mb-4">
           <div className="flex items-center gap-2">
-            <Cpu className="h-4 w-4 text-denim" />
-            <h3 className="font-bold text-sm text-graphite dark:text-dark-text">
-              Машинне навчання на Scikit-Learn: Модель та гіперпараметри
-            </h3>
+            <Cpu className="h-5 w-5 text-denim" />
+            <div>
+              <h3 className="font-display font-bold text-sm text-navy dark:text-white">
+                Класифікація на Scikit-Learn: Датасет, Модель та Поріг Рішення
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-dark-muted">
+                Досліджуйте баланс між точністю (Precision) та повнотою (Recall)
+              </p>
+            </div>
           </div>
-          <span className="rounded bg-denim/10 px-2 py-0.5 text-[11px] font-semibold text-denim">
-            Справжній CPU Worker
+          <span className="rounded-full bg-denim/10 px-3 py-0.5 text-[11px] font-bold text-denim border border-denim/30">
+            Scikit-Learn CPU
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Dataset & Business Scenario Selectors */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4 border-b border-borderline/60">
+          <div>
+            <label className="text-xs font-bold text-navy dark:text-white block mb-1">
+              Навчальний датасет:
+            </label>
+            <select
+              value={datasetName}
+              onChange={(e) => setDatasetName(e.target.value)}
+              className="w-full rounded-lg border border-borderline bg-white p-2 text-xs font-semibold text-navy dark:border-dark-border dark:bg-dark-surface dark:text-white"
+            >
+              <option value="synthetic">Синтетичний нелінійний датасет (500 семплів, 6 ознак)</option>
+              <option value="iris">Iris Classification (Класичний біологічний датасет)</option>
+              <option value="wine">Wine Quality Classification (Хімічний аналіз вин)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-navy dark:text-white block mb-1">
+              Бізнес-контекст та ціна помилок:
+            </label>
+            <select
+              value={scenario}
+              onChange={(e) => setScenario(e.target.value)}
+              className="w-full rounded-lg border border-borderline bg-white p-2 text-xs font-semibold text-navy dark:border-dark-border dark:bg-dark-surface dark:text-white"
+            >
+              <option value="fraud">Fraud Detection (Пропуск шахрая = $500, блокування = $10)</option>
+              <option value="balanced">Збалансований класифікатор (Рівна ціна помилок)</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Hyperparameters Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4">
           <div>
             <label className="text-xs font-medium text-gray-600 dark:text-dark-muted block mb-1">
-              Алгоритм класифікації:
+              Алгоритм моделі:
             </label>
             <select
               value={algorithm}
               onChange={(e) => setAlgorithm(e.target.value)}
-              className="w-full rounded-md border border-borderline bg-white p-2 text-xs font-medium text-graphite dark:border-dark-border dark:bg-dark-surface dark:text-dark-text"
+              className="w-full rounded-md border border-borderline bg-white p-2 text-xs font-semibold text-navy dark:border-dark-border dark:bg-dark-surface dark:text-white"
             >
               <option value="random_forest">Random Forest Classifier</option>
               <option value="gradient_boosting">Gradient Boosting (GBDT)</option>
-              <option value="decision_tree">Decision Tree</option>
+              <option value="decision_tree">Decision Tree (Одне дерево)</option>
               <option value="logistic_regression">Logistic Regression</option>
-              <option value="knn">K-Nearest Neighbors (KNN)</option>
             </select>
           </div>
 
@@ -93,7 +144,7 @@ export default function MLLabWorkspace({ onRun, running, result }: MLLabProps) {
 
           <div>
             <div className="flex justify-between text-xs font-medium text-gray-600 dark:text-dark-muted mb-1">
-              <span>Максимальна глибина (max_depth):</span>
+              <span>Макс. глибина (max_depth):</span>
               <span className="font-mono font-bold text-denim">{maxDepth}</span>
             </div>
             <input
@@ -110,7 +161,7 @@ export default function MLLabWorkspace({ onRun, running, result }: MLLabProps) {
           <div>
             <div className="flex justify-between text-xs font-medium text-gray-600 dark:text-dark-muted mb-1">
               <span>Decision Threshold:</span>
-              <span className="font-mono font-bold text-denim">{threshold}</span>
+              <span className="font-mono font-bold text-tangerine">{threshold}</span>
             </div>
             <input
               type="range"
@@ -119,94 +170,114 @@ export default function MLLabWorkspace({ onRun, running, result }: MLLabProps) {
               step="0.05"
               value={threshold}
               onChange={(e) => setThreshold(parseFloat(e.target.value))}
-              className="w-full accent-denim"
+              className="w-full accent-tangerine"
             />
           </div>
         </div>
 
+        {/* Practical Hint Bar */}
+        <div className="mt-4 rounded-lg bg-cloud/50 p-3 text-xs text-navy dark:bg-dark-bg dark:text-dark-text flex items-center gap-2 border border-borderline dark:border-dark-border">
+          <Info className="h-4 w-4 text-denim shrink-0" />
+          <span>
+            {threshold > 0.6
+              ? "Високий поріг (>0.60): модель дуже обережна, високий Precision, але ризик пропустити цільові події (низький Recall)."
+              : threshold < 0.4
+              ? "Низький поріг (<0.40): модель ловить майже всі підозрілі події (високий Recall), але збільшує кількість False Positives."
+              : "Збалансований дефолтний поріг (0.40 - 0.60)."}
+          </span>
+        </div>
+
+        {/* Submit Train Button */}
         <div className="mt-4 flex justify-end gap-2 border-t border-borderline/60 pt-3">
           <button
             onClick={handleExecute}
             disabled={running}
-            className="inline-flex items-center gap-2 rounded-md bg-denim px-5 py-1.5 text-xs font-semibold text-white shadow hover:bg-denim-dark transition disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl bg-tangerine px-6 py-2.5 text-xs font-bold text-white shadow hover:opacity-95 transition disabled:opacity-50"
           >
-            <Play className="h-3.5 w-3.5" />
-            {running ? "Навчання моделі..." : "Навчити модель (Train & Evaluate)"}
+            <Play className="h-4 w-4 fill-white" />
+            {running ? "Навчання моделі..." : "Навчити та оцінити модель"}
           </button>
         </div>
       </div>
 
-      {/* Visual Heatmap & Performance Metrics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Interactive Confusion Matrix */}
-        <div className="rounded-xl border border-borderline bg-white p-5 shadow-sm dark:border-dark-border dark:bg-dark-surface">
-          <h4 className="text-xs font-bold text-graphite dark:text-dark-text mb-1">
-            Теплова карта матриці плутанини (Confusion Matrix)
-          </h4>
-          <p className="text-[11px] text-gray-500 mb-4">
-            Розподіл передбачень на валідаційному датасеті
-          </p>
+      {/* Visual Confusion Matrix & Performance Deck */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Interactive Confusion Matrix (7 cols) */}
+        <div className="lg:col-span-7 rounded-xl border border-borderline bg-white p-5 shadow-sm dark:border-dark-border dark:bg-dark-surface space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="font-display font-bold text-sm text-navy dark:text-white">
+              Матриця помилок (Confusion Matrix)
+            </h4>
+            <span className="text-xs text-gray-400 font-mono">Валідаційний спліт</span>
+          </div>
 
-          <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto">
+          <div className="grid grid-cols-2 gap-3 max-w-md mx-auto">
             {/* True Negative */}
-            <div className="rounded-lg bg-denim/15 border border-denim/30 p-4 text-center">
-              <span className="text-[10px] font-semibold uppercase text-denim block mb-1">True Negative (TN)</span>
-              <span className="text-2xl font-black text-graphite dark:text-dark-text">{cm[0]?.[0] || 0}</span>
-              <span className="text-[10px] text-gray-500 block mt-1">Правильно негативні</span>
+            <div className="rounded-xl bg-denim/10 border border-denim/30 p-4 text-center">
+              <span className="text-[10px] font-bold uppercase text-denim-700 block mb-1">True Negative (TN)</span>
+              <span className="text-3xl font-display font-black text-navy dark:text-white">{tn}</span>
+              <span className="text-[11px] text-gray-500 block mt-1">Правильно негативні</span>
             </div>
 
             {/* False Positive */}
-            <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-center dark:bg-red-950/20 dark:border-red-900/40">
-              <span className="text-[10px] font-semibold uppercase text-red-600 block mb-1">False Positive (FP)</span>
-              <span className="text-2xl font-black text-red-700 dark:text-red-400">{cm[0]?.[1] || 0}</span>
-              <span className="text-[10px] text-gray-500 block mt-1">Помилка I роду</span>
+            <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-center dark:bg-red-950/20 dark:border-red-900/40">
+              <span className="text-[10px] font-bold uppercase text-red-600 block mb-1">False Positive (FP)</span>
+              <span className="text-3xl font-display font-black text-red-700 dark:text-red-400">{fp}</span>
+              <span className="text-[11px] text-gray-500 block mt-1">Хибна тривога (I рід)</span>
             </div>
 
             {/* False Negative */}
-            <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-center dark:bg-amber-950/20 dark:border-amber-900/40">
-              <span className="text-[10px] font-semibold uppercase text-amber-700 block mb-1">False Negative (FN)</span>
-              <span className="text-2xl font-black text-amber-800 dark:text-amber-400">{cm[1]?.[0] || 0}</span>
-              <span className="text-[10px] text-gray-500 block mt-1">Помилка II роду</span>
+            <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-center dark:bg-amber-950/20 dark:border-amber-900/40">
+              <span className="text-[10px] font-bold uppercase text-amber-700 block mb-1">False Negative (FN)</span>
+              <span className="text-3xl font-display font-black text-amber-800 dark:text-amber-400">{fn}</span>
+              <span className="text-[11px] text-gray-500 block mt-1">Пропуск події (II рід)</span>
             </div>
 
             {/* True Positive */}
-            <div className="rounded-lg bg-green-50 border border-green-200 p-4 text-center dark:bg-green-950/20 dark:border-green-900/40">
-              <span className="text-[10px] font-semibold uppercase text-green-700 block mb-1">True Positive (TP)</span>
-              <span className="text-2xl font-black text-green-800 dark:text-green-400">{cm[1]?.[1] || 0}</span>
-              <span className="text-[10px] text-gray-500 block mt-1">Правильно позитивні</span>
+            <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-center dark:bg-emerald-950/20 dark:border-emerald-900/40">
+              <span className="text-[10px] font-bold uppercase text-emerald-700 block mb-1">True Positive (TP)</span>
+              <span className="text-3xl font-display font-black text-emerald-800 dark:text-emerald-400">{tp}</span>
+              <span className="text-[11px] text-gray-500 block mt-1">Правильно виявлені</span>
+            </div>
+          </div>
+
+          {/* Business Cost Impact */}
+          <div className="rounded-lg bg-orange-50/60 p-3.5 border border-tangerine/30 text-xs flex items-center justify-between dark:bg-orange-950/20">
+            <div>
+              <span className="font-bold text-navy dark:text-white block">Оцінка фінансових втрат від помилок:</span>
+              <span className="text-gray-500 text-[11px]">FN × $500 + FP × $10</span>
+            </div>
+            <div className="font-display font-black text-lg text-tangerine">
+              ${estimatedCost.toLocaleString()}
             </div>
           </div>
         </div>
 
-        {/* Metrics Overview */}
-        <div className="rounded-xl border border-borderline bg-white p-5 shadow-sm dark:border-dark-border dark:bg-dark-surface">
-          <h4 className="text-xs font-bold text-graphite dark:text-dark-text mb-1">
-            Ключові метрики якості моделі
-          </h4>
-          <p className="text-[11px] text-gray-500 mb-4">
-            Обчислені на тестовій вибірці без витоку даних
-          </p>
+        {/* Quality Metrics Breakdown (5 cols) */}
+        <div className="lg:col-span-5 rounded-xl border border-borderline bg-white p-5 shadow-sm dark:border-dark-border dark:bg-dark-surface space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="font-display font-bold text-sm text-navy dark:text-white">
+              Метрики класифікації
+            </h4>
+            <span className="text-xs font-mono text-denim font-bold">ROC-AUC: {(metrics.roc_auc * 100).toFixed(1)}%</span>
+          </div>
 
           <div className="space-y-3">
             {[
-              { label: "Точність (Accuracy)", val: metrics.accuracy, target: 0.85 },
-              { label: "Прецизійність (Precision)", val: metrics.precision, target: 0.8 },
-              { label: "Повнота (Recall)", val: metrics.recall, target: 0.8 },
-              { label: "F1-Score", val: metrics.f1_score, target: 0.82 },
-              { label: "ROC-AUC Score", val: metrics.roc_auc, target: 0.88 },
+              { label: "Accuracy (Загальна точність)", val: metrics.accuracy, color: "bg-denim" },
+              { label: "Precision (Точність позитивних)", val: metrics.precision, color: "bg-indigo-600" },
+              { label: "Recall (Повнота виявлення)", val: metrics.recall, color: "bg-tangerine" },
+              { label: "F1-Score (Гармонійне середнє)", val: metrics.f1_score, color: "bg-emerald-600" },
             ].map((m) => {
               const pct = ((m.val || 0) * 100).toFixed(1);
               return (
-                <div key={m.label}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="font-medium text-graphite dark:text-dark-text">{m.label}</span>
-                    <span className="font-mono font-bold text-denim">{pct}%</span>
+                <div key={m.label} className="space-y-1">
+                  <div className="flex justify-between text-xs font-medium">
+                    <span className="text-navy dark:text-white">{m.label}</span>
+                    <span className="font-mono font-bold">{pct}%</span>
                   </div>
-                  <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden dark:bg-dark-border">
-                    <div
-                      className="h-full rounded-full bg-denim"
-                      style={{ width: `${pct}%` }}
-                    />
+                  <div className="h-2 w-full rounded-full bg-cloud overflow-hidden dark:bg-dark-border">
+                    <div className={`h-full rounded-full ${m.color}`} style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );

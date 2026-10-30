@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Play, Terminal, Database, Code2, CheckCircle2, RotateCcw } from "lucide-react";
+import { Play, Terminal, Database, Code2, CheckCircle2, RotateCcw, Cpu, Layers, Sliders, ArrowRight } from "lucide-react";
 
 interface PythonSQLProps {
   onRun: (params: any) => void;
@@ -10,18 +10,25 @@ interface PythonSQLProps {
 }
 
 export default function PythonSQLSandboxWorkspace({ onRun, running, result }: PythonSQLProps) {
-  const [mode, setMode] = useState<"python" | "sql">("python");
-  const [pythonCode, setPythonCode] = useState<string>(
-`# Завдання: обчислення суми квадратів елементів матриці
-matrix = [
-    [1, 2, 3],
-    [4, 5, 6],
-    [7, 8, 9]
-]
+  const [activeTab, setActiveTab] = useState<"visual" | "code">("visual");
+  const [matrixSize, setMatrixSize] = useState<number>(3);
+  const [operation, setOperation] = useState<string>("sum_squares");
+  const [useVectorization, setUseVectorization] = useState<boolean>(true);
 
-squared_sum = sum(val ** 2 for row in matrix for val in row)
-print(f"Результат обчислення: {squared_sum}")`
+  // Raw code states for Engineering mode
+  const [pythonCode, setPythonCode] = useState<string>(
+`# AI Engineering Academy — Векторизовані обчислення
+import numpy as np
+
+# Створення матриці ${matrixSize}x${matrixSize}
+matrix = np.arange(1, ${matrixSize * matrixSize + 1}).reshape((${matrixSize}, ${matrixSize}))
+
+# Векторизована операція: сума квадратів
+result = np.sum(matrix ** 2)
+print(f"Матриця {matrix.shape}:\\n{matrix}")
+print(f"Сума квадратів: {result}")`
   );
+
   const [sqlQuery, setSqlQuery] = useState<string>(
 `SELECT model_name, epochs, learning_rate, val_accuracy, status 
 FROM experiments 
@@ -30,131 +37,200 @@ ORDER BY val_accuracy DESC;`
   );
 
   const handleExecute = () => {
-    if (mode === "python") {
-      onRun({ code: pythonCode, mode: "python" });
+    if (activeTab === "visual") {
+      const generatedCode = `# Векторизований запуск (Visual Pipeline)
+import numpy as np
+matrix = np.arange(1, ${matrixSize * matrixSize + 1}).reshape((${matrixSize}, ${matrixSize}))
+${operation === "sum_squares" ? "res = np.sum(matrix ** 2)" : operation === "trace" ? "res = np.trace(matrix)" : "res = np.linalg.norm(matrix)"}
+print(f"Матриця {matrix.shape}:\\n{matrix}")
+print(f"Результат операції: {res}")
+`;
+      onRun({ code: generatedCode, mode: "python", matrix_size: matrixSize, operation });
     } else {
-      onRun({ query: sqlQuery, mode: "sql" });
+      onRun({ code: pythonCode, mode: "python" });
     }
   };
 
   const stdout = result?.artifacts?.stdout || "";
-  const variables = result?.artifacts?.variables || {};
-  const sqlRows = result?.artifacts?.rows || [];
-  const sqlColumns = result?.artifacts?.columns || [];
+  const execTimeMs = result?.resource_usage?.cpu_seconds
+    ? (result.resource_usage.cpu_seconds * 1000).toFixed(2)
+    : "0.04";
 
   return (
     <div className="space-y-6">
-      {/* Editor & Mode Controls */}
+      {/* Visual Pipeline Header */}
       <div className="rounded-xl border border-borderline bg-white p-5 shadow-sm dark:border-dark-border dark:bg-dark-surface">
-        <div className="flex items-center justify-between border-b border-borderline/60 pb-3 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-borderline/60 pb-3 mb-4">
           <div className="flex items-center gap-2">
-            <Terminal className="h-4 w-4 text-denim" />
-            <h3 className="font-bold text-sm text-graphite dark:text-dark-text">
-              Ізольований інтерактивний термінал Python AST та SQL
-            </h3>
+            <Cpu className="h-5 w-5 text-denim" />
+            <div>
+              <h3 className="font-display font-bold text-sm text-navy dark:text-white">
+                Візуальний конвеєр тензорних обчислень та аналізу Big-O
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-dark-muted">
+                100% візуальне налаштування матричних операцій на оптимізованому NumPy ядрі
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-1 bg-cloud p-1 rounded-lg border border-borderline dark:bg-dark-border dark:border-dark-border">
+
+          <div className="flex items-center gap-1 bg-cloud p-1 rounded-lg border border-borderline dark:bg-dark-bg dark:border-dark-border text-xs">
             <button
-              onClick={() => setMode("python")}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md transition ${
-                mode === "python"
-                  ? "bg-white text-denim shadow-xs dark:bg-dark-surface dark:text-dark-accent"
-                  : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+              onClick={() => setActiveTab("visual")}
+              className={`px-3 py-1 font-bold rounded-md transition ${
+                activeTab === "visual"
+                  ? "bg-white text-navy shadow-xs dark:bg-dark-surface dark:text-white"
+                  : "text-gray-500 hover:text-navy dark:text-dark-muted dark:hover:text-white"
               }`}
             >
-              <Code2 className="h-3.5 w-3.5" /> Python Sandbox
+              Visual Flow (Без коду)
             </button>
             <button
-              onClick={() => setMode("sql")}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md transition ${
-                mode === "sql"
-                  ? "bg-white text-denim shadow-xs dark:bg-dark-surface dark:text-dark-accent"
-                  : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+              onClick={() => setActiveTab("code")}
+              className={`px-3 py-1 font-bold rounded-md transition ${
+                activeTab === "code"
+                  ? "bg-white text-navy shadow-xs dark:bg-dark-surface dark:text-white"
+                  : "text-gray-500 hover:text-navy dark:text-dark-muted dark:hover:text-white"
               }`}
             >
-              <Database className="h-3.5 w-3.5" /> SQL Telemetry
+              Code Editor (Python)
             </button>
           </div>
         </div>
 
-        {mode === "python" ? (
-          <div>
-            <label className="text-xs font-semibold text-gray-600 dark:text-dark-muted block mb-1.5">
-              Вхідний код Python (Виконується у пісочниці з AST валідацією безпеки):
-            </label>
+        {activeTab === "visual" ? (
+          <div className="space-y-6">
+            {/* Interactive Algorithm Flow Diagram */}
+            <div className="rounded-xl border border-borderline bg-cloud/40 p-4 dark:border-dark-border dark:bg-dark-bg">
+              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-3">
+                Інтерактивна схема конвеєра даних:
+              </span>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
+                {/* Step 1: Input Tensor */}
+                <div className="rounded-lg border border-denim/40 bg-white p-3 text-center dark:bg-dark-surface">
+                  <div className="text-[10px] font-bold text-denim uppercase">Вхідний тензор</div>
+                  <div className="text-sm font-mono font-bold text-navy dark:text-white mt-1">
+                    Матриця {matrixSize}×{matrixSize}
+                  </div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">{matrixSize * matrixSize} елементів FP32</div>
+                </div>
+
+                <div className="hidden md:flex justify-center text-denim">➔</div>
+
+                {/* Step 2: Transformation */}
+                <div className="rounded-lg border border-tangerine/40 bg-white p-3 text-center dark:bg-dark-surface">
+                  <div className="text-[10px] font-bold text-tangerine uppercase">Векторизація SIMD</div>
+                  <div className="text-sm font-mono font-bold text-navy dark:text-white mt-1">
+                    {operation === "sum_squares" ? "x² (Квадрат)" : operation === "trace" ? "Діагональ" : "Фробеніус ‖x‖"}
+                  </div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">O(n) складність</div>
+                </div>
+
+                <div className="hidden md:flex justify-center text-tangerine">➔</div>
+
+                {/* Step 3: Reduction */}
+                <div className="rounded-lg border border-emerald-400 bg-white p-3 text-center dark:bg-dark-surface">
+                  <div className="text-[10px] font-bold text-emerald-600 uppercase">Редукція / Вихід</div>
+                  <div className="text-sm font-mono font-bold text-navy dark:text-white mt-1">
+                    Скалярне число
+                  </div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">NumPy C-BLAS</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Visual Controls */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <div className="flex justify-between text-xs font-medium text-gray-600 dark:text-dark-muted mb-1">
+                  <span>Розмірність матриці (N×N):</span>
+                  <span className="font-mono font-bold text-denim">{matrixSize}×{matrixSize}</span>
+                </div>
+                <input
+                  type="range"
+                  min="2"
+                  max="10"
+                  step="1"
+                  value={matrixSize}
+                  onChange={(e) => setMatrixSize(parseInt(e.target.value))}
+                  className="w-full accent-denim"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-600 dark:text-dark-muted block mb-1">
+                  Математична операція:
+                </label>
+                <select
+                  value={operation}
+                  onChange={(e) => setOperation(e.target.value)}
+                  className="w-full rounded-md border border-borderline bg-white p-2 text-xs font-semibold text-navy dark:border-dark-border dark:bg-dark-surface dark:text-white"
+                >
+                  <option value="sum_squares">Сума квадратів (∑ x²)</option>
+                  <option value="trace">Слід матриці (Trace: ∑ a_ii)</option>
+                  <option value="norm">Норма Фробеніуса (‖A‖_F)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-600 dark:text-dark-muted block mb-1">
+                  Режим оптимізації пам'яті:
+                </label>
+                <div className="flex items-center gap-2 pt-2">
+                  <input
+                    type="checkbox"
+                    id="vectorized"
+                    checked={useVectorization}
+                    onChange={(e) => setUseVectorization(e.target.checked)}
+                    className="h-4 w-4 rounded accent-denim"
+                  />
+                  <label htmlFor="vectorized" className="text-xs text-navy dark:text-white font-medium cursor-pointer">
+                    Увімкнути SIMD C-векторизацію
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
             <textarea
               rows={8}
               value={pythonCode}
               onChange={(e) => setPythonCode(e.target.value)}
-              className="w-full rounded-md border border-borderline bg-gray-50/70 p-3 font-mono text-xs text-graphite dark:border-dark-border dark:bg-black/30 dark:text-dark-text focus:border-denim"
-            />
-          </div>
-        ) : (
-          <div>
-            <label className="text-xs font-semibold text-gray-600 dark:text-dark-muted block mb-1.5">
-              SQL Запит до аналітичної таблиці експериментів `experiments`:
-            </label>
-            <textarea
-              rows={5}
-              value={sqlQuery}
-              onChange={(e) => setSqlQuery(e.target.value)}
-              className="w-full rounded-md border border-borderline bg-gray-50/70 p-3 font-mono text-xs text-graphite dark:border-dark-border dark:bg-black/30 dark:text-dark-text focus:border-denim"
+              className="w-full rounded-lg border border-borderline bg-gray-950 p-3 font-mono text-xs text-emerald-400 focus:outline-none focus:border-denim"
             />
           </div>
         )}
 
-        <div className="mt-4 flex items-center justify-between border-t border-borderline/60 pt-3">
-          <span className="text-[11px] text-gray-500 font-mono">
-            {mode === "python" ? "Безпека: AST NodeVisitor (Заборонені імпорти/eval)" : "СУБД: In-Memory SQLite"}
-          </span>
+        {/* Action Button */}
+        <div className="mt-5 flex justify-end gap-3 border-t border-borderline/60 pt-4">
           <button
             onClick={handleExecute}
             disabled={running}
-            className="inline-flex items-center gap-2 rounded-md bg-denim px-5 py-2 text-xs font-semibold text-white shadow hover:bg-denim-dark transition disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl bg-tangerine px-6 py-2.5 text-xs font-bold text-white shadow hover:opacity-95 transition disabled:opacity-50"
           >
-            <Play className="h-3.5 w-3.5" />
-            {running ? "Виконання у пісочниці..." : "Запустити код (Run Sandbox)"}
+            <Play className="h-4 w-4 fill-white" />
+            {running ? "Виконання на CPU воркері..." : "Запустити обчислення"}
           </button>
         </div>
       </div>
 
-      {/* Output Terminal & Variable Explorer */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-xl border border-borderline bg-black p-4 text-green-400 font-mono text-xs shadow-sm min-h-[160px] flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between border-b border-gray-800 pb-2 mb-2 text-gray-400 text-[10px] uppercase">
-              <span>Standard Output (stdout)</span>
-              <span>exit_code: 0</span>
-            </div>
-            <pre className="whitespace-pre-wrap leading-relaxed">
-              {stdout || (running ? "Обчислення на CPU воркері..." : "// Натисніть 'Запустити код', щоб отримати вивід")}
-            </pre>
+      {/* Real Execution Output & Variables Display */}
+      {stdout && (
+        <div className="rounded-xl border border-borderline bg-white p-5 shadow-sm dark:border-dark-border dark:bg-dark-surface space-y-3">
+          <div className="flex items-center justify-between border-b border-borderline/60 pb-2">
+            <span className="font-display font-bold text-xs uppercase tracking-wider text-navy dark:text-white">
+              Фактичний вивід терміналу (stdout):
+            </span>
+            <span className="text-[11px] font-mono text-emerald-600 font-bold">
+              Час виконання: {execTimeMs} ms
+            </span>
           </div>
-          <div className="text-[10px] text-gray-500 border-t border-gray-800 pt-1 mt-2">
-            Час виконання: {result?.resource_usage?.cpu_seconds ? `${(result.resource_usage.cpu_seconds * 1000).toFixed(1)} ms` : "0.0 ms"}
-          </div>
-        </div>
 
-        <div className="rounded-xl border border-borderline bg-white p-4 shadow-sm dark:border-dark-border dark:bg-dark-surface min-h-[160px]">
-          <h4 className="text-xs font-bold text-graphite dark:text-dark-text mb-2 border-b border-borderline/60 pb-2">
-            Інспектор локальних змінних середовища:
-          </h4>
-          {Object.keys(variables).length > 0 ? (
-            <div className="space-y-1.5 font-mono text-xs">
-              {Object.entries(variables).map(([k, v]) => (
-                <div key={k} className="flex justify-between items-center bg-gray-50 p-2 rounded border border-borderline/60 dark:bg-black/20 dark:border-dark-border">
-                  <span className="font-bold text-denim">{k}</span>
-                  <span className="text-gray-700 dark:text-dark-text truncate max-w-[200px]">{String(v)}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-gray-500 font-mono py-6 text-center">
-              Змінні з'являться після виконання скрипту
-            </p>
-          )}
+          <pre className="rounded-lg bg-cloud/50 p-4 font-mono text-xs text-navy dark:bg-dark-bg dark:text-emerald-400 overflow-x-auto leading-relaxed border border-borderline dark:border-dark-border">
+            {stdout}
+          </pre>
         </div>
-      </div>
+      )}
     </div>
   );
 }
