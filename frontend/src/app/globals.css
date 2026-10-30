@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-denim: #6DA2E4;
+  --color-tangerine: #EC612F;
+  --color-cloud: #EDF5FE;
+  --color-base: #FFFFFF;
+  --color-graphite: #24292F;
+  --color-border: #D0D7DE;
+  --color-neutral: #E8E8E8;
+  --color-oxide: #5D0D02;
+}
+
+.dark {
+  --color-cloud: #0D1117;
+  --color-base: #161B22;
+  --color-graphite: #E6EDF3;
+  --color-border: #30363D;
+  --color-neutral: #21262D;
+}
+
+body {
+  background-color: var(--color-cloud);
+  color: var(--color-graphite);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* GitHub-inspired clean tabs */
+.tab-active {
+  border-bottom: 2px solid #EC612F;
+  color: #24292F;
+  font-weight: 600;
+}
+.dark .tab-active {
+  border-bottom: 2px solid #EC612F;
+  color: #FFFFFF;
+}
+
+/* Minimalist scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D0D7DE;
+  border-radius: 4px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #30363D;
+}
