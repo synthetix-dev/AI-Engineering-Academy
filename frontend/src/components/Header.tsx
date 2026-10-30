@@ -15,6 +15,12 @@ import {
   Moon,
   Activity,
   User as UserIcon,
+  Sparkles,
+  Hammer,
+  Compass,
+  Target,
+  FolderGit2,
+  BookOpen,
 } from "lucide-react";
 import { getQuotas, QuotaData } from "@/lib/api";
 
@@ -56,14 +62,14 @@ export default function Header() {
   };
 
   const navItems = [
-    { label: "Кар'єра", href: "/career-paths", icon: Briefcase },
-    { label: "Треки", href: "/tracks", icon: Layers },
-    { label: "Лабораторії (20)", href: "/labs", icon: Terminal },
-    { label: "Моделі", href: "/models", icon: Cpu },
-    { label: "Датасети", href: "/datasets", icon: Database },
+    { label: "Learn", href: "/tracks", icon: BookOpen, badge: "Курси" },
+    { label: "Build", href: "/build", icon: Hammer, badge: "Створюй" },
+    { label: "Explore", href: "/explore", icon: Compass, badge: "Досліджуй" },
+    { label: "Solve", href: "/solve", icon: Target, badge: "Виклики" },
+    { label: "Career", href: "/career-paths", icon: Briefcase, badge: "Шляхи" },
+    { label: "Проєкти", href: "/projects", icon: FolderGit2 },
     { label: "Портфоліо", href: "/portfolio", icon: Shield },
-    { label: "Прогрес", href: "/progress", icon: Award },
-    { label: "Ops & Статус", href: "/admin", icon: Activity },
+    { label: "Ops", href: "/admin", icon: Activity },
   ];
 
   return (
@@ -75,9 +81,9 @@ export default function Header() {
             AI
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-bold tracking-tight">AI ENGINEERING ACADEMY</span>
-            <span className="text-[10px] text-gray-500 font-mono -mt-1 dark:text-dark-muted">
-              OPEN PLATFORM v1.1
+            <span className="text-sm font-bold tracking-tight">AI ENGINEERING STUDIO</span>
+            <span className="text-[9px] text-gray-500 font-mono -mt-1 dark:text-dark-muted">
+              LEARN · BUILD · EXPLORE · SOLVE · CAREER
             </span>
           </div>
         </Link>

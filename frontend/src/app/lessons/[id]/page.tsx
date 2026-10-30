@@ -75,7 +75,9 @@ export default function LessonDetailPage() {
           <span className="rounded bg-denim/15 px-2 py-0.5 text-[11px] font-bold text-denim-700 dark:bg-denim/20 dark:text-denim">
             Урок #{lesson.order}
           </span>
-          <span className="text-xs font-mono text-gray-400">ID: {lesson.id}</span>
+          <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+            Інтерактивний урок
+          </span>
         </div>
         <h1 className="text-2xl font-bold text-graphite dark:text-dark-text">{lesson.title}</h1>
         <p className="text-sm text-gray-600 dark:text-dark-muted leading-relaxed">{lesson.theory_summary}</p>

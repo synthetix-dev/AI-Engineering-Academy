@@ -331,6 +331,7 @@ export async function createProject(data: {
   repo_url?: string;
   metrics: any;
   configs: any;
+  artifacts?: any;
 }): Promise<ProjectItem> {
   await ensureAuthenticated();
   return request<ProjectItem>("/projects", {
@@ -393,15 +394,77 @@ export async function getQuotas(): Promise<QuotaData> {
   return request<QuotaData>("/me/quotas");
 }
 
+export interface MissionItem {
+  slug: string;
+  title: string;
+  pillar: string;
+  domain: string;
+  difficulty: string;
+  xp_reward: number;
+  context: string;
+  bug_description: string;
+  lab_slug: string;
+  initial_broken_params: Record<string, any>;
+  target_criteria: string;
+  hints: string[];
+}
+
+export interface MissionVerifyResult {
+  passed: boolean;
+  score: number;
+  xp_earned: number;
+  feedback: string;
+  verified_metrics: Record<string, any>;
+  run_id?: string;
+  next_recommended_mission?: string;
+}
+
+export interface MentorAssistResult {
+  explanation: string;
+  suggested_params: Record<string, any>;
+  suggested_code: string;
+  diagnostic_tips: string[];
+  action_type: string;
+}
+
+export async function getMissions(): Promise<MissionItem[]> {
+  return request<MissionItem[]>("/missions");
+}
+
+export async function getMissionBySlug(slug: string): Promise<MissionItem> {
+  return request<MissionItem>(`/missions/${slug}`);
+}
+
+export async function verifyMission(slug: string, fixedParams: Record<string, any>): Promise<MissionVerifyResult> {
+  await ensureAuthenticated();
+  return request<MissionVerifyResult>(`/missions/${slug}/verify`, {
+    method: "POST",
+    body: JSON.stringify({ fixed_params: fixedParams }),
+  });
+}
+
+export async function getMentorPrompts(labSlug: string): Promise<{ lab_slug: string; title: string; quick_prompts: string[] }> {
+  return request(`/mentor/quick-prompts/${labSlug}`);
+}
+
+export async function getMentorAssistance(labSlug: string, userGoal: string, currentParams: Record<string, any>): Promise<MentorAssistResult> {
+  return request<MentorAssistResult>("/mentor/assist", {
+    method: "POST",
+    body: JSON.stringify({
+      lab_slug: labSlug,
+      user_goal: userGoal,
+      current_params: currentParams,
+    }),
+  });
+}
+
 export async function getTelemetry(): Promise<TelemetryData> {
-  // Use admin credentials if needed or current user with fallback
   const token = getAuthToken();
   const res = await fetch(`${API_BASE}/admin/telemetry`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (res.ok) return res.json();
   
-  // Login as admin if learner does not have admin permissions
   const adminLogin = await fetch(`${API_BASE}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

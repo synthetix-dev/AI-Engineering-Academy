@@ -70,8 +70,8 @@ export default function TracksCatalogPage() {
                       <span className="rounded bg-denim/15 px-2 py-0.5 text-[11px] font-bold text-denim-700 dark:bg-denim/20 dark:text-denim">
                         Модуль #{track.order}
                       </span>
-                      <span className="text-xs font-mono text-gray-400 dark:text-dark-muted">
-                        Slug: {track.slug}
+                      <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                        ✓ Теорія + Реальна практика
                       </span>
                     </div>
 
@@ -116,7 +116,7 @@ export default function TracksCatalogPage() {
                         {lab ? lab.title : "Інтегрований воркер"}
                       </div>
                       <div className="mt-1 text-[11px] text-gray-500 dark:text-dark-muted">
-                        {lab ? `Клас: ${lab.runtime_class} (макс. ${lab.max_duration_sec}с)` : "CPU Worker"}
+                        Практичне середовище з живими обчисленнями
                       </div>
                     </div>
 

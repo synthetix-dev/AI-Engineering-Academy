@@ -60,7 +60,7 @@ jobs:
         run: |
           PYTHONPATH=. python -m backend.app.core.init_db
 
-      - name: Run Pytest Suite (46 Tests)
+      - name: Run Pytest Suite (50 Tests)
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgrespassword@localhost:5432/ai_academy
           DATABASE_SYNC_URL: postgresql://postgres:postgrespassword@localhost:5432/ai_academy

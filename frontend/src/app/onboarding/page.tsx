@@ -15,6 +15,7 @@ import {
   Award,
   BookOpen,
   Code2,
+  Play,
 } from "lucide-react";
 import { getCareerPaths, submitOnboarding, CareerPath } from "@/lib/api";
 
@@ -352,20 +353,29 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          <div className="flex justify-between items-center pt-2">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-2">
             <Link
               href="/career-paths"
               className="text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
             >
-              Переглянути всі кар'єрні шляхи
+              ← Переглянути всі кар'єрні шляхи
             </Link>
-            <Link
-              href="/labs"
-              className="inline-flex items-center gap-2 rounded-lg bg-graphite px-5 py-2 text-xs font-medium text-white shadow hover:bg-black transition dark:bg-white dark:text-black"
-            >
-              До лабораторій (20)
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/tracks"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-borderline bg-white px-4 py-2 text-xs font-semibold text-graphite hover:bg-gray-50 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text transition"
+              >
+                Навчальні треки (Learn)
+              </Link>
+              <Link
+                href="/explore"
+                className="inline-flex items-center gap-2 rounded-lg bg-tangerine px-5 py-2 text-xs font-bold text-white shadow hover:opacity-90 transition"
+              >
+                <Play className="h-3.5 w-3.5 fill-current" />
+                Розпочати першу практику
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
           </div>
         </div>
       )}
