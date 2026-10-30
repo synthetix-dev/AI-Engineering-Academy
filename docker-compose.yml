@@ -31,12 +31,31 @@ services:
       timeout: 5s
       retries: 5
 
+  db_migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: ai_academy_migrate
+    command: ["python", "-m", "backend.app.core.init_db"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ai_academy}
+      DATABASE_SYNC_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ai_academy}
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set in environment or .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: "no"
+
   backend:
     build:
       context: .
       dockerfile: Dockerfile.backend
     container_name: ai_academy_backend
     restart: unless-stopped
+    command: ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ai_academy}
       DATABASE_SYNC_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ai_academy}
@@ -49,6 +68,30 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      db_migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ./data_storage:/app/data_storage
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: ai_academy_worker
+    restart: unless-stopped
+    command: ["python", "-m", "backend.app.worker"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ai_academy}
+      DATABASE_SYNC_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ai_academy}
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set in environment or .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      db_migrate:
+        condition: service_completed_successfully
     volumes:
       - ./data_storage:/app/data_storage
 

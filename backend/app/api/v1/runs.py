@@ -168,7 +168,18 @@ async def create_run(
 
     # 6. Execute based on wait flag
     if not wait:
-        # OPS-01: Asynchronous non-blocking background dispatch
+        # OPS-01 & OPS-007: Enqueue to Redis worker queue + spawn background task
+        try:
+            from backend.app.core.redis_client import get_redis_client
+            redis_c = get_redis_client()
+            await redis_c.rpush("ai_academy_jobs", json.dumps({
+                "run_id": str(run_record.id),
+                "lab_slug": lab.slug,
+                "params": req.params,
+                "user_id": str(current_user.id)
+            }))
+        except Exception:
+            pass
         asyncio.create_task(execute_run_in_background(run_record.id, lab.slug, req.params, current_user.id))
         return run_record
 

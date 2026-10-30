@@ -1,5 +1,6 @@
 import re
 import math
+import json
 import numpy as np
 from typing import Any, Dict, List, Tuple
 from sqlalchemy import text
@@ -129,7 +130,7 @@ async def index_and_search_rag(
             await session.execute(
                 text("""
                     INSERT INTO vector_documents (id, collection_name, document_name, chunk_index, text, embedding, metadata_json, created_at)
-                    VALUES (gen_random_uuid(), :coll, :doc, :idx, :txt, :emb::vector, :meta::jsonb, NOW())
+                    VALUES (gen_random_uuid(), :coll, :doc, :idx, :txt, CAST(:emb AS vector), CAST(:meta AS jsonb), NOW())
                 """),
                 {
                     "coll": collection_name,
@@ -146,7 +147,7 @@ async def index_and_search_rag(
         query_vec_str = "[" + ",".join(map(str, query_vec)) + "]"
         result = await session.execute(
             text("""
-                SELECT chunk_index, text, 1 - (embedding <=> :q_vec::vector) AS cosine_sim
+                SELECT chunk_index, text, 1 - (embedding <=> CAST(:q_vec AS vector)) AS cosine_sim
                 FROM vector_documents
                 WHERE collection_name = :coll
                 ORDER BY cosine_sim DESC

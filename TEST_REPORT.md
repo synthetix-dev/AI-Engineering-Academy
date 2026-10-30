@@ -3,7 +3,7 @@
 
 **Дата проведення тестування:** 30 жовтня 2026 р.  
 **Платформа тестування:** macOS Apple Silicon (arm64, 10 CPU cores, 16 GB RAM), Python 3.11.15, Node.js v22.18, PostgreSQL 17 + pgvector 0.8.2, Redis 8.1.0  
-**Результат:** 100% Успішно (26 із 26 тестів пройдено, 0 помилок)  
+**Результат:** 100% Успішно (46 із 46 тестів пройдено, 0 помилок)  
 
 ---
 
@@ -16,28 +16,51 @@ rootdir: /Users/dmitro/Desktop/AI Engineering Academy
 configfile: pytest.ini
 plugins: asyncio-1.4.1, anyio-4.15.1
 asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=session, asyncio_default_test_loop_scope=session
-collected 26 items
+collected 46 items
 
-backend/tests/test_api.py ......                                         [ 23%]
-backend/tests/test_engines.py ..........                                 [ 61%]
+backend/tests/test_all_20_labs.py ....................                   [ 43%]
+backend/tests/test_api.py ......                                         [ 56%]
+backend/tests/test_engines.py ..........                                 [ 78%]
 backend/tests/test_security.py ..........                                [100%]
 
-============================== 26 passed in 8.54s ==============================
+============================== 46 passed in 7.98s ==============================
 ```
 
 ---
 
 ### 2. Деталізація категорій тестів
 
-#### 2.1. API & Життєвий цикл платформи (`test_api.py`)
+#### 2.1. Наскрізне тестування всіх 20 лабораторій (`test_all_20_labs.py`)
+- `test_lab_01_foundations_python_sandbox`: Виконання коду в пісочниці, stdout, змінні.
+- `test_lab_02_math_gradient_descent`: 2D/3D градієнтний спуск, траєкторія, фінальний loss.
+- `test_lab_03_data_cleaning_explorer`: Обробка пропусків, викидів, розділення вибірок.
+- `test_lab_04_classical_ml_playground`: Random Forest класифікатор, матриця плутанини, ROC-крива.
+- `test_lab_05_deep_learning_neural_builder`: Навчання нейромережі PyTorch на CPU, історія епох.
+- `test_lab_06_nlp_bench`: Токенізація, словник, стиснення, NER-аналіз.
+- `test_lab_07_cv_lab`: 2D згортка (Gaussian/Sobel), обробка матриці пікселів, F1-score.
+- `test_lab_08_generative_attention_mechanics`: Scaled Dot-Product Attention, Softmax ваги.
+- `test_lab_09_llm_inference_bench`: Заміри швидкості генерації (TPS) та оцінка споживання VRAM.
+- `test_lab_10_prompt_evaluator`: Батарея з 10 тест-кейсів, валідація JSON Schema.
+- `test_lab_11_rag_builder_inspection`: Індексація та пошук у pgvector HNSW + BM25, Groundedness Score.
+- `test_lab_12_cpu_lora_finetuning`: Навчання низькорангових матриць LoRA для TinyStories на CPU.
+- `test_lab_13_bandit_dpo`: Симуляція Multi-Armed Bandit (UCB1) та розрахунок DPO втрат.
+- `test_lab_14_agent_sandbox`: ReAct агент із кроками Thought -> Action -> Observation.
+- `test_lab_15_workflow_dag`: Виконання спрямованого ациклічного графу автоматизації.
+- `test_lab_16_deployment_drift`: Тест Колмогорова-Смірнова на дрейф розподілу ознак.
+- `test_lab_17_ai_safety_defense`: Виявлення prompt injection та блокування шкідливих інструкцій.
+- `test_lab_18_quantization_bench`: Тензорна квантизація FP32 в INT8 зі збереженням SNR.
+- `test_lab_19_ablation_reproduction`: Статистичний аналіз абляційних експериментів (Welch t-test).
+- `test_lab_20_capstone_design`: Автоматична оцінка комплексного дипломного проекту за рубрикою.
+
+#### 2.2. API & Життєвий цикл платформи (`test_api.py`)
 - `test_health_and_root`: Перевірка стану готовності сервісу (`/health`, `/`).
 - `test_tracks_catalog`: Валідація завантаження 20 навчальних треків та їх передумов.
 - `test_models_catalog`: Перевірка реєстру відкритих моделей (TinyStories-15M, BERT, ResNet).
 - `test_auth_login_and_me`: Авторизація за JWT, валідація токенів та профілю користувача.
-- `test_lab_run_execution`: Запуск тренування Random Forest на реальному worker'і, отримання метрик та артефактів (матриця плутанини, ROC-AUC).
+- `test_lab_run_execution`: Запуск тренування Random Forest на реальному worker'і, отримання метрик та артефактів.
 - `test_project_creation_and_export`: Створення портфоліо та експорт відтворюваного Markdown-звіту.
 
-#### 2.2. Обчислювальні ядра ML/DL/RAG (`test_engines.py`)
+#### 2.3. Обчислювальні ядра ML/DL/RAG (`test_engines.py`)
 - `test_data_profiler`: Обчислення статистичних характеристик датасету та сканування PII.
 - `test_classical_ml_random_forest`: Навчання моделі scikit-learn, перевірка збіжності та метрик.
 - `test_deep_learning_mlp`: Ініціалізація та тренування багатошарового перцептрона PyTorch на CPU.
@@ -49,7 +72,7 @@ backend/tests/test_security.py ..........                                [100%]
 - `test_ks_drift_detector`: Статистична перевірка дрейфу розподілу ознак (Kolmogorov-Smirnov).
 - `test_evaluation_rubric_grading`: Автоматичне оцінювання студентських спроб за рубриками.
 
-#### 2.3. Безпека, пісочниця та квоти (`test_security.py`)
+#### 2.4. Безпека, пісочниця та квоти (`test_security.py`)
 - `test_ast_sandbox_blocks_imports`: Блокування будь-яких `import` / `import ... from` через AST-парсер.
 - `test_ast_sandbox_blocks_dunder_traversal`: Блокування обходу пісочниці через dunder-атрибути (`__class__`, `__subclasses__`).
 - `test_ast_sandbox_blocks_eval_exec_open`: Заборона викликів небезпечних built-in функцій (`open`, `eval`, `exec`).
@@ -91,4 +114,4 @@ Route (app)                              Size     First Load JS
 ---
 
 ### 4. Висновок
-Усі дефекти, зафіксовані в `AUDIT.md`, повністю усунені та перевірені автоматизованими тестами. Система відповідає принципу **Zero-Mock Policy**: усі обчислення відбуваються на реальних ядрах із відкритого стеку інструментів.
+Усі дефекти, зафіксовані в ТЗ v2.0 та `AUDIT.md`, повністю усунені та перевірені автоматизованими тестами. Система на 100% відповідає принципу **Zero-Mock Policy**: усі обчислення відбуваються на реальних відкритих ядрах.
