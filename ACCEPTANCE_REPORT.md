@@ -3,6 +3,7 @@
 **Date:** 2026-10-30  
 **Repository:** [https://github.com/synthetix-dev/AI-Engineering-Academy](https://github.com/synthetix-dev/AI-Engineering-Academy)  
 **Branch:** `main`  
+**Latest Verified Commit:** [`e30eb20`](https://github.com/synthetix-dev/AI-Engineering-Academy/commit/e30eb20)  
 **Paradigm:** **AI Engineering Studio — Learn, Build, Explore, Solve, Career**  
 
 ---
@@ -40,46 +41,49 @@ Every studio workspace provides seamless switching across three native modes:
 | **OPS-007** | Lack of Dedicated Background Worker | CPU-heavy ML training blocking HTTP request-response cycle | `backend/app/worker.py`, `docker-compose.yml` | `0c618e1`, `6d70e5f` | Spawned dedicated Redis consumer on queue `ai_academy_jobs` |
 | **TEST-008**| Incomplete Automated Test Coverage | Lack of automated CI testing in public GitHub repo | `.github/workflows/ci.yml` | `6d70e5f` | Full GitHub Actions pipeline running PostgreSQL 17 + pgvector + Redis, pytest, and Next.js build |
 | **DATA-009**| NaN / Null Serialization Error in JSONB | Pandas `NaN` values converted to invalid PostgreSQL JSON syntax | `backend/app/core/security.py`, `backend/app/api/v1/runs.py`, `backend/app/engines/data_engine.py`, `backend/app/worker.py` | `6d70e5f` | Added `sanitize_json` converting `NaN`/`Inf` to `None`/`null` |
-| **STUDIO-010**| Over-technical cluttered 10-tab interface | Generic horizontal tabs and raw JSON configs | `frontend/src/app/labs/[slug]/page.tsx`, `frontend/src/components/Header.tsx` | Current | Replaced with Tri-Mode Studio (Visual, AI Mentor, Engineering) with human explanations |
+| **STUDIO-010**| Over-technical cluttered 10-tab interface | Generic horizontal tabs and raw JSON configs | `frontend/src/app/labs/[slug]/page.tsx`, `frontend/src/components/Header.tsx` | `e30eb20` | Replaced with Tri-Mode Studio (Visual, AI Mentor, Engineering) with human explanations |
 
 ---
 
-## 3. Comprehensive Acceptance Matrix (5 Pillars, 20 Labs, & Core Infrastructure)
+## 3. Comprehensive Requirements Verification Table
 
-| Модуль / Механіка | Вимога ТЗ | Реалізовано | E2E пройдено | Доказ | Помилки | Статус |
-| :--- | :--- | :---: | :---: | :--- | :--- | :---: |
-| **Pillar 1: Learn** | 20 треків, короткі уроки, алгоритмічні карти, квізи з миттєвою практикою | ТАК | ТАК | Маршрути `/tracks`, `/tracks/[slug]`, `/lessons/[id]`; відсутні технічні слаги | Жодних | **PASS** |
-| **Pillar 2: Build** | Візуальні конструктори нейромереж, RAG, ReAct агентів, DAG конвеєрів, LoRA | ТАК | ТАК | Маршрут `/build` з 6 конструкторами, генерація PyTorch та pgvector запитів | Жодних | **PASS** |
-| **Pillar 3: Explore** | Інтерактивні пісочниці уваги, оптимізації, дрейфу даних, квантизації, CV | ТАК | ТАК | Маршрут `/explore` з 6 інтерактивними лабораторіями та живими обчисленнями | Жодних | **PASS** |
-| **Pillar 4: Solve** | Інженерні виклики (вибух градієнтів, ін'єкції промптів, витік даних, збій DAG) | ТАК | ТАК | Маршрут `/solve` з верифікатором `POST /api/v1/missions/{slug}/verify` | Жодних | **PASS** |
-| **Pillar 5: Career** | 4 кар'єрні треки, онбординг з діагностикою, портфоліо артефактів | ТАК | ТАК | Маршрути `/career-paths`, `/portfolio`, `/progress`, `/onboarding` | Жодних | **PASS** |
-| **Living Projects** | Наскрізні системи крізь усі дисципліни від даних до MLOps | ТАК | ТАК | Маршрут `/projects`, збереження артефактів, експорт JSON специфікації | Жодних | **PASS** |
-| **Tri-Mode Studio** | Перемикання режимів Visual, AI Mentor та Engineering без втрати стану | ТАК | ТАК | Студія `/labs/[slug]` з підтримкою всіх 3 режимів та AI-наставником | Жодних | **PASS** |
-| **01. Python & SQL Foundations** | AST-пісочниця Python, операції з NumPy, валідація SQL | ТАК | ТАК | `execution_time_ms: 0.03ms`, AST блокує заборонені імпорти | Жодних | **PASS** |
-| **02. Mathematics for AI** | Чисельний та аналітичний градієнт, траєкторія збіжності 2D | ТАК | ТАК | MSE між аналітичним і чисельним $< 10^{-6}$, 30 кроків оптимізації | Жодних | **PASS** |
-| **03. Data Engineering & Preprocessing** | Детекція PII через Regex, імпутація пропусків, IQR фільтрація, скейлінг | ТАК | ТАК | 10 рядків $\to$ 7 очищених, 2 пропуски заповнено mean (50.0), 3 викиди видалено | Жодних | **PASS** |
-| **04. Classical Machine Learning** | Scikit-learn Random Forest / Logistic Regression, крива ROC, матриця помилок | ТАК | ТАК | Recall: 0.7419, Accuracy: 0.8400, розраховано feature importances | Жодних | **PASS** |
-| **05. Deep Learning Fundamentals** | PyTorch MLP forward/backward pass, Adam оптимізатор, графік втрат | ТАК | ТАК | Final validation loss: 0.4143 за 3 епохи на PyTorch CPU | Жодних | **PASS** |
-| **06. NLP & Speech Fundamentals** | N-gram токенізація, TF-IDF векторизація, косинусна семантична подібність | ТАК | ТАК | Кількість токенів: 52, словник: 36, косинусна схожість: 0.7824 | Жодних | **PASS** |
-| **07. Computer Vision** | 2D матрична згортка (Gaussian blur, Sobel edges, Sharpen) | ТАК | ТАК | Precision: 1.0, Recall: 1.0, розраховано ядро 3x3 Gaussian | Жодних | **PASS** |
-| **08. Generative Models & Attention** | Multi-head self-attention ($Q \times K^T / \sqrt{d_k}$), softmax теплокарта, семплінг | ТАК | ТАК | Розмірність $(4, 4)$, сума рядка softmax $= 1.000$, sampled token: 4 | Жодних | **PASS** |
-| **09. LLM Engineering** | Калькулятор розміру KV-кешу, споживання пам'яті, затримка TTFT | ТАК | ТАК | KV cache: 8.00 GB, вага моделі: 14.00 GB, Throughput: 42.1 tps | Жодних | **PASS** |
-| **10. Prompt Engineering** | Шаблонізація System/User промптів, інтерполяція, оцінка за рубриками | ТАК | ТАК | 8/8 тест-кейсів пройдено, Toxicity: 0.0, Instruction adherence: 1.0 | Жодних | **PASS** |
-| **11. RAG Systems** | PostgreSQL pgvector косинусний пошук, чанкінг, оцінка обґрунтованості | ТАК | ТАК | Топ-k векторних збігів, Groundedness: 0.6667, галюцинацій не виявлено | Жодних | **PASS** |
-| **12. Fine-Tuning & Parameter Efficiency**| PyTorch CPU Low-Rank Adaptation (LoRA $W + B \times A$), оновлення ваг | ТАК | ТАК | Навчальні параметри: 0.39%, початковий loss: 6.82 $\to$ фінальний: 5.415 | Жодних | **PASS** |
-| **13. RL & Preference Learning** | Симуляція Multi-Armed Bandit (Epsilon-greedy, UCB1), графіки regret | ТАК | ТАК | 50 кроків симуляції, Total regret: 11.8, оптимальний вибір у 82% кроків | Жодних | **PASS** |
-| **14. AI Agents & Tool Use** | Цикл ReAct (Thought-Action-Observation), маршрутизація інструментів | ТАК | ТАК | 3 кроки виконано, виклики `web_search` $\to$ `calculator`, мету досягнуто | Жодних | **PASS** |
-| **15. Automation & Integrations** | Топологічне сортування DAG і послідовне виконання вузлів конвеєра | ТАК | ТАК | 6 вузлів DAG виконано послідовно без циклічних залежностей | Жодних | **PASS** |
-| **16. MLOps / LLMOps & Monitoring** | Детекція statistical drift за тестом Колмогорова-Смірнова, тригер сповіщень | ТАК | ТАК | KS-statistic: 0.482, p-value: 0.0000 ($< 0.05$), згенеровано алерти дрифту | Жодних | **PASS** |
-| **17. AI Safety, Alignment & Defense** | Сканер ін'єкцій у промпти, евристичний класифікатор джейлбрейків, PII guard | ТАК | ТАК | Heuristic score: 0.94, `is_safe`: False, небезпечний запит нейтралізовано | Жодних | **PASS** |
-| **18. Optimization & Quantization** | Динамічне квантування FP32 $\to$ INT8/FP16, Signal-to-Noise Ratio (SNR) | ТАК | ТАК | Економія пам'яті: 75.0%, SNR: 41.66 dB, похибка MSE: 0.00012 | Жодних | **PASS** |
-| **19. Research & Experimentation**| Бенчмаркінг абляційних досліджень, двовибірковий t-test, довірчі інтервали | ТАК | ТАК | Різниця середніх: 0.041, p-value: 0.1477, розраховано довірчий інтервал | Жодних | **PASS** |
-| **20. Capstone Product Engineering**| Комплексна перевірка архітектури продукту, автоматична рубрика оцінки | ТАК | ТАК | Загальний бал: 92/100, `is_approved`: True, безпека: 90/100, дизайн: 95/100 | Жодних | **PASS** |
-| **Core: Авторизація та RBAC** | JWT-автентифікація, хешування паролів, перевірка прав доступу | ТАК | ТАК | Успішний вхід `learner@aiacademy.io`, валідація токена у заголовках | Жодних | **PASS** |
-| **Core: Квотування ресурсів** | Бюджет секунд CPU та дискового простору на користувача | ТАК | ТАК | Облік споживання на кожен запуск, HTTP 429 при вичерпанні ліміту | Жодних | **PASS** |
-| **Core: Потоковий SSE моніторинг**| Живий стрім логів і метрик запуску з Redis Pub/Sub | ТАК | ТАК | Ендпоінт `GET /runs/{id}/stream` повертає статус і метрики в реальному часі | Жодних | **PASS** |
-| **Core: Сховище та датасети** | Завантаження локальних файлів, перевірка лімітів розміру, попередній перегляд | ТАК | ТАК | Перевірка дискової квоти та безпечне чанкове завантаження файлів | Жодних | **PASS** |
-| **Core: CI/CD Automation** | GitHub Actions конвеєр збірки, тестів та перевірки типів | ТАК | ТАК | `.github/workflows/ci.yml` валідує Postgres 17, Redis, 50 тестів pytest, Next.js 14 | Жодних | **PASS** |
+Format: `Вимога | Реалізація | Файли | Тести | Доказ | Статус`
+
+| Вимога | Реалізація | Файли | Тести | Доказ | Статус |
+| :--- | :--- | :--- | :--- | :--- | :---: |
+| **Pillar 1: Learn** | 20 треків, інтерактивні уроки, алгоритмічні схеми, квізи з миттєвою практикою | `frontend/src/app/tracks/`, `frontend/src/app/lessons/[id]/` | `test_api.py::test_tracks_list` | 20 треків без технічних слагів, маршрутизація уроків | **PASS** |
+| **Pillar 2: Build** | 6 візуальних конструкторів: MLP на PyTorch, RAG з pgvector, ReAct Агент, DAG, LoRA | `frontend/src/app/build/page.tsx`, `frontend/src/components/labs/` | `test_engines.py`, `test_all_20_labs.py` | Збірка конвеєрів без сирого коду, генерація параметрів | **PASS** |
+| **Pillar 3: Explore** | 6 інтерактивних пісочниць: Attention, градієнти, дрейф даних (KS-тест), квантизація | `frontend/src/app/explore/page.tsx`, `frontend/src/components/labs/` | `test_all_20_labs.py` | Реальний розрахунок Q*K^T, p-value KS-тесту, SNR dB | **PASS** |
+| **Pillar 4: Solve** | Інженерні виклики (вибух градієнтів, ін'єкції промптів, витік даних, збій DAG) | `backend/app/api/v1/missions.py`, `frontend/src/app/solve/page.tsx` | `test_studio_v2.py::test_mission_verification_lifecycle` | Ендпоінт `POST /missions/{slug}/verify`, нарахування XP | **PASS** |
+| **Pillar 5: Career** | 4 кар'єрні треки, онбординг з діагностикою, портфоліо артефактів | `frontend/src/app/career-paths/`, `frontend/src/app/onboarding/` | `test_api.py::test_career_paths` | Отримання плану та зарахування верифікованих компетенцій | **PASS** |
+| **Living Projects** | Наскрізні системи крізь усі дисципліни від даних до MLOps з експортом JSON | `frontend/src/app/projects/page.tsx`, `backend/app/api/v1/projects.py` | `test_studio_v2.py::test_living_projects_lifecycle` | Модель `Project`, збереження метрик та версій комітів | **PASS** |
+| **Tri-Mode Studio** | Перемикання Visual, AI Mentor та Engineering без втрати стану | `frontend/src/app/labs/[slug]/page.tsx`, `backend/app/api/v1/mentor.py` | `test_studio_v2.py::test_mentor_quick_prompts_and_assistance` | Режими Visual/Mentor/Engineering на єдиних даних експерименту | **PASS** |
+| **AI Mentor** | Педагогічний наставник українською мовою з підбором параметрів | `backend/app/api/v1/mentor.py`, `frontend/src/lib/api.ts` | `test_studio_v2.py::test_mentor_quick_prompts_and_assistance` | `POST /mentor/assist` повертає пояснення та кнопку застосування | **PASS** |
+| **01. Python & SQL** | AST-пісочниця Python, операції з NumPy, валідація SQL | `backend/app/engines/foundations_engine.py`, `PythonSQLSandboxWorkspace.tsx` | `test_all_20_labs.py` | `execution_time_ms: 0.03ms`, AST блокує заборонені імпорти | **PASS** |
+| **02. Mathematics for AI**| Чисельний та аналітичний градієнт, траєкторія збіжності 2D | `backend/app/engines/math_engine.py`, `MathLabWorkspace.tsx` | `test_all_20_labs.py` | MSE між аналітичним і чисельним $< 10^{-6}$, 30 кроків оптимізації | **PASS** |
+| **03. Data Engineering** | Детекція PII через Regex, імпутація пропусків, IQR фільтрація, скейлінг | `backend/app/engines/data_engine.py`, `DataLabWorkspace.tsx` | `test_all_20_labs.py` | 10 рядків $\to$ 7 очищених, 2 пропуски заповнено mean (50.0) | **PASS** |
+| **04. Classical ML** | Scikit-learn Random Forest / Logistic Regression, ROC крива, матриця помилок | `backend/app/engines/classical_ml.py`, `MLLabWorkspace.tsx` | `test_all_20_labs.py` | Recall: 0.7419, Accuracy: 0.8400, feature importances | **PASS** |
+| **05. Deep Learning** | PyTorch MLP forward/backward pass, Adam оптимізатор, графік втрат | `backend/app/engines/deep_learning.py`, `DeepLearningWorkspace.tsx` | `test_all_20_labs.py` | Final validation loss: 0.4143 за 3 епохи на PyTorch CPU | **PASS** |
+| **06. NLP & Speech** | N-gram токенізація, TF-IDF векторизація, косинусна семантична подібність | `backend/app/engines/nlp_speech.py`, `NLPSpeechWorkspace.tsx` | `test_all_20_labs.py` | Кількість токенів: 52, словник: 36, косинусна схожість: 0.7824 | **PASS** |
+| **07. Computer Vision** | 2D матрична згортка (Gaussian blur, Sobel edges, Sharpen) | `backend/app/engines/cv_engine.py`, `CVLabWorkspace.tsx` | `test_all_20_labs.py` | Precision: 1.0, Recall: 1.0, розраховано ядро 3x3 Gaussian | **PASS** |
+| **08. Generative Models**| Multi-head self-attention ($Q \times K^T / \sqrt{d_k}$), softmax теплокарта, семплінг | `backend/app/engines/generative_models.py`, `GenerativeAttentionWorkspace.tsx` | `test_all_20_labs.py` | Розмірність $(4, 4)$, сума рядка softmax $= 1.000$, token ID: 4 | **PASS** |
+| **09. LLM Engineering** | Калькулятор розміру KV-кешу, споживання пам'яті, затримка TTFT | `backend/app/engines/llm_engine.py`, `LLMBenchWorkspace.tsx` | `test_all_20_labs.py` | KV cache: 8.00 GB, вага моделі: 14.00 GB, Throughput: 42.1 tps | **PASS** |
+| **10. Prompt Engineering**| Шаблонізація System/User промптів, інтерполяція, оцінка за рубриками | `backend/app/engines/prompt_engine.py`, `PromptStudioWorkspace.tsx` | `test_all_20_labs.py` | 8/8 тест-кейсів пройдено, Toxicity: 0.0, Adherence: 1.0 | **PASS** |
+| **11. RAG Systems** | PostgreSQL pgvector косинусний пошук, чанкінг, оцінка обґрунтованості | `backend/app/engines/rag_engine.py`, `RAGPipelineWorkspace.tsx` | `test_all_20_labs.py` | Топ-k векторних збігів, Groundedness: 0.6667, галюцинацій 0 | **PASS** |
+| **12. Fine-Tuning LoRA** | PyTorch CPU Low-Rank Adaptation (LoRA $W + B \times A$), оновлення ваг | `backend/app/engines/fine_tuning.py`, `FineTuningWorkspace.tsx` | `test_all_20_labs.py` | Навчальні параметри: 0.39%, початковий loss: 6.82 $\to$ 5.415 | **PASS** |
+| **13. RL & Bandits** | Симуляція Multi-Armed Bandit (Epsilon-greedy, UCB1), графіки regret | `backend/app/engines/rl_preferences.py`, `BanditDPOWorkspace.tsx` | `test_all_20_labs.py` | 50 кроків симуляції, Total regret: 11.8, оптимальний вибір 82% | **PASS** |
+| **14. AI Agents** | Цикл ReAct (Thought-Action-Observation), маршрутизація інструментів | `backend/app/engines/agents_engine.py`, `AgentWorkspace.tsx` | `test_all_20_labs.py` | 3 кроки виконано, виклики `web_search` $\to$ `calculator`, успіх | **PASS** |
+| **15. Automation DAG** | Топологічне сортування DAG і послідовне виконання вузлів конвеєра | `backend/app/engines/automation_engine.py`, `AutomationDAGWorkspace.tsx` | `test_all_20_labs.py` | 6 вузлів DAG виконано послідовно без циклічних блокувань | **PASS** |
+| **16. MLOps Monitoring**| Детекція statistical drift за тестом Колмогорова-Смірнова, тригер сповіщень | `backend/app/engines/mlops_engine.py`, `MLOpsDriftWorkspace.tsx` | `test_all_20_labs.py` | KS-statistic: 0.482, p-value: 0.0000 ($< 0.05$), згенеровано алерти | **PASS** |
+| **17. AI Safety** | Сканер ін'єкцій у промпти, евристичний класифікатор джейлбрейків, PII guard | `backend/app/engines/safety_engine.py`, `SafetyDefenseWorkspace.tsx` | `test_all_20_labs.py` | Heuristic score: 0.94, `is_safe`: False, небезпечний запит блоковано | **PASS** |
+| **18. Quantization** | Динамічне квантування FP32 $\to$ INT8/FP16, Signal-to-Noise Ratio (SNR) | `backend/app/engines/quantization_engine.py`, `QuantizationBenchWorkspace.tsx` | `test_all_20_labs.py` | Економія пам'яті: 75.0%, SNR: 41.66 dB, похибка MSE: 0.00012 | **PASS** |
+| **19. Research Ablation**| Бенчмаркінг абляційних досліджень, двовибірковий t-test, довірчі інтервали | `backend/app/engines/ablation_engine.py`, `ResearchAblationWorkspace.tsx` | `test_all_20_labs.py` | Різниця середніх: 0.041, p-value: 0.1477, розраховано довірчий інтервал | **PASS** |
+| **20. Capstone Design** | Комплексна перевірка архітектури продукту, автоматична рубрика оцінки | `backend/app/engines/capstone_engine.py`, `CapstoneProjectWorkspace.tsx` | `test_all_20_labs.py` | Загальний бал: 92/100, `is_approved`: True, безпека: 90/100 | **PASS** |
+| **Core: Auth & RBAC** | JWT-автентифікація, хешування паролів, перевірка прав доступу | `backend/app/api/v1/auth.py`, `backend/app/core/security.py` | `test_security.py` | Вхід користувача, верифікація токенів у заголовках | **PASS** |
+| **Core: Quotas** | Бюджет секунд CPU та дискового простору на користувача | `backend/app/models/quota.py`, `backend/app/api/v1/runs.py` | `test_api.py::test_quotas` | Облік споживання CPU на кожен запуск, HTTP 429 при ліміті | **PASS** |
+| **Core: Redis Stream** | Живий стрім логів і метрик запуску з Redis Pub/Sub | `backend/app/core/redis_client.py`, `backend/app/api/v1/runs.py` | `test_api.py::test_run_stream` | Ендпоінт `GET /runs/{id}/stream` повертає статус у реальному часі | **PASS** |
+| **Core: Datasets** | Завантаження локальних файлів, перевірка лімітів розміру, попередній перегляд | `backend/app/api/v1/datasets.py` | `test_api.py::test_dataset_upload` | Перевірка дискової квоти та безпечне чанкове завантаження | **PASS** |
+| **Core: CI Automation**| GitHub Actions конвеєр збірки, тестів та перевірки типів | `.github/workflows/ci.yml` | GitHub Actions CI Run | Валідація Postgres 17, Redis, 50 тестів pytest, Next.js 14 | **PASS** |
 
 ---
 
