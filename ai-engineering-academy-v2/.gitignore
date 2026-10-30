@@ -1,0 +1,28 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Next.js
+.next/
+out/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+.pytest_cache/
+
+# Databases & local storage
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs & OS
+*.log
+.DS_Store
+*.local
+*.tsbuildinfo
+

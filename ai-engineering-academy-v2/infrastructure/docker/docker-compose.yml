@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  api:
+    build:
+      context: ../../..
+      dockerfile: ai-engineering-academy-v2/infrastructure/docker/Dockerfile.api
+    ports:
+      - "8000:8000"
+    environment:
+      - SECRET_KEY=prod-secret-change-in-production-123456
+      - DATABASE_URL=sqlite+aiosqlite:///./academy_v2.db
+      - REDIS_URL=redis://valkey:6379/0
+    depends_on:
+      - valkey
+
+  valkey:
+    image: valkey/valkey:7.2
+    ports:
+      - "6379:6379"
+
+  web:
+    build:
+      context: ../../..
+      dockerfile: ai-engineering-academy-v2/infrastructure/docker/Dockerfile.web
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+    depends_on:
+      - api

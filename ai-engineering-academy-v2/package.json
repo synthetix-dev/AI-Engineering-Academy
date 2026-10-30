@@ -1,0 +1,15 @@
+{
+  "name": "ai-engineering-academy-v2-monorepo",
+  "version": "2.0.0",
+  "private": true,
+  "description": "AI Engineering Academy 2.0 Monorepo",
+  "scripts": {
+    "dev": "pnpm --filter @academy/web dev",
+    "build": "pnpm --filter @academy/web build",
+    "lint": "pnpm --filter @academy/web lint",
+    "test:ml": "PYTHONPATH=apps/api pytest tests/ -v"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

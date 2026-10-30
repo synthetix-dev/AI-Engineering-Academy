@@ -1,0 +1,13 @@
+{
+  "name": "@academy/learning-engine",
+  "version": "2.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "@academy/shared-types": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsc"
+  }
+}

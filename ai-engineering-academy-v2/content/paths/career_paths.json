@@ -1,0 +1,61 @@
+[
+  {
+    "id": "path-ai-engineer",
+    "code": "ai_engineer",
+    "title": "AI Engineer (Full-Stack AI)",
+    "description": "Комплексна підготовка інженера: від роботи з даними та створення моделей до розгортання RAG, AI-агентів та production систем.",
+    "icon": "Rocket",
+    "track_ids": [
+      "engineering-fundamentals",
+      "data-engineering",
+      "machine-learning",
+      "deep-learning",
+      "llm-engineering",
+      "prompt-engineering",
+      "rag-engineering",
+      "ai-agents",
+      "automation-integrations",
+      "mlops-llmops",
+      "ai-safety",
+      "ai-product-engineering"
+    ]
+  },
+  {
+    "id": "path-ml-engineer",
+    "code": "ml_engineer",
+    "title": "Machine Learning Engineer",
+    "description": "Глибоке занурення в математику, оптимізацію, класичний ML, глибокі нейромережі, тренування моделей та MLOps інфраструктуру.",
+    "icon": "Cpu",
+    "track_ids": [
+      "engineering-fundamentals",
+      "mathematics-for-ai",
+      "data-engineering",
+      "machine-learning",
+      "deep-learning",
+      "computer-vision",
+      "nlp-speech",
+      "training-finetuning",
+      "mlops-llmops",
+      "ai-optimization"
+    ]
+  },
+  {
+    "id": "path-llm-engineer",
+    "code": "llm_engineer",
+    "title": "LLM & Generative AI Engineer",
+    "description": "Спеціалізація на великих мовних моделях: промпт-інжиніринг, векторні бази даних, RAG, Fine-tuning (LoRA), квантизація та автономні агенти.",
+    "icon": "Sparkles",
+    "track_ids": [
+      "engineering-fundamentals",
+      "nlp-speech",
+      "generative-ai",
+      "llm-engineering",
+      "prompt-engineering",
+      "rag-engineering",
+      "training-finetuning",
+      "ai-agents",
+      "ai-safety",
+      "ai-optimization"
+    ]
+  }
+]
